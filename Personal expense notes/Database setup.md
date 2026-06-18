@@ -11,3 +11,4 @@ BudgetPeriod { id, startDate, endDate, limitCents }
 
 ![[Pasted image 20260617160213.png]]
 
+![[Pasted image 20260618142031.png]]
