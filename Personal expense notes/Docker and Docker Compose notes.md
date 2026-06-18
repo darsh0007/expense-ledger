@@ -1,0 +1,3 @@
+- **Docker:** A platform that packages software into standardized units called **containers**. A container has everything the software needs to run (code, runtime, system tools, system libraries, and settings) so that it runs exactly the same way on your work laptop as it does on your personal computer.
+
+- **Docker Compose:** A tool for defining and running multi-container Docker applications. Instead of typing long, complex commands in your terminal to spin up a database with the correct passwords and ports, you write your configurations once in a `docker-compose.yml` file. Then, you can start the entire system with a single command: `docker compose up -d`.

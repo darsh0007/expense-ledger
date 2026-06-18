@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Project Specification: Personal Expense & Splitwise Sync Bridge</title>
+    <!-- Tailwind CSS for modern aesthetics -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for print output */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                font-size: 11pt !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .page-break {
+                page-break-before: always !important;
+                break-before: page !important;
+            }
+            pre, code {
+                background-color: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                white-space: pre-wrap !important;
+                word-wrap: break-word !important;
+            }
+            h1, h2, h3 {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            .container {
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <!-- Print Action Bar (Hidden during printing) -->
+    <div class="no-print bg-indigo-600 text-white shadow-md">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+                <h1 class="font-bold text-lg">Print-Ready Document Hub</h1>
+                <p class="text-sm text-indigo-100">Open this file in your browser, click print, and save as a clean PDF.</p>
+            </div>
+            <button onclick="window.print()" class="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold px-5 py-2.5 rounded-lg shadow transition-colors flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print or Save to PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Spec Container -->
+    <main class="container max-w-4xl mx-auto bg-white shadow-sm border border-slate-200 my-8 px-8 py-10 rounded-xl">
+        
+        <!-- Header -->
+        <header class="border-b border-slate-200 pb-8 mb-8">
+            <div class="flex items-center gap-3 text-indigo-600 font-semibold text-sm tracking-wider uppercase mb-2">
+                <span>Developer Blueprint</span>
+                <span>•</span>
+                <span>System Spec</span>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight">
+                Personal Expense &amp; Splitwise Sync Bridge
+            </h1>
+            <p class="text-slate-500 mt-2 text-lg">Master Project Specification &amp; Architectural Outline</p>
+        </header>
+
+        <!-- Section 1 -->
+        <section class="mb-10">
+            <h2 class="text-2xl font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                <span class="text-indigo-600">1.</span> Executive Summary &amp; Core Concept
+            </h2>
+            <p class="text-slate-600 leading-relaxed mb-4">
+                This project solves a persistent gap in personal finance software: tracking a strict personal budget limit (such as $800 per month) when your credit cards are regularly used for co-mingled purchases (group groceries, shared tabs, and buying items for others) which are reimbursed asynchronously.
+            </p>
+            <p class="text-slate-600 leading-relaxed mb-6">
+                Standard budgeting apps fail because they cannot track running social debts. Splitwise fails because it does not manage personal cash flow or link to personal bank limits. This custom system serves as an intelligent bridge between raw bank transactions and the Splitwise API.
+            </p>
+
+            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-5 rounded-r-lg mb-6">
+                <h3 class="font-bold text-indigo-900 mb-2">Core Ledger Mechanics: Separating Cash Flow from Expenses</h3>
+                <p class="text-indigo-950 text-sm leading-relaxed mb-3">
+                    Your application uses a dual-concept ledger system under the hood:
+                </p>
+                <ul class="list-disc list-inside space-y-2 text-indigo-950 text-sm">
+                    <li><strong class="text-indigo-900">Payment Methods (The Cash Flow Source):</strong> Your actual credit card accounts or cash wallet. Purchases are logged here at their 100% face value.</li>
+                    <li><strong class="text-indigo-900">Asset Accounts (IOUs - The Receivables):</strong> This represents "Housemates Owe Me" or "Logan Owes Me." Money assigned here is an asset, not an expense.</li>
+                    <li><strong class="text-indigo-900">Expense Accounts (The Consumption - Your $800 Limit):</strong> This represents what you actually consumed (e.g., your portion of groceries, your personal coffee). <strong>Only these lines subtract from your $800 monthly limit.</strong></li>
+                </ul>
+                <p class="text-indigo-950 text-sm leading-relaxed mt-3 pt-3 border-t border-indigo-100">
+                    When you pay $100 for groceries at Walmart, the full $100 is written to your Credit Card ledger. When you split the transaction on your "free days," $60 is assigned to your personal Grocery Expense (hitting your budget) and $40 is assigned to the "Logan Owe Me" Asset Account. When Logan reimburses you, the $40 shifts from "Logan Owe Me" to your cash/checking account. Your $800 personal limit is never artificially inflated.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2 -->
+        <section class="mb-10 page-break">
+            <h2 class="text-2xl font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                <span class="text-indigo-600">2.</span> Technical System Architecture
+            </h2>
+            <p class="text-slate-600 leading-relaxed mb-6">
+                Below is the conceptual flow of the hybrid architecture. It starts with your physical credit card purchase and ends with a sync to both your local budget dashboard and the Splitwise cloud registry.
+            </p>
+            <div class="bg-slate-900 text-slate-100 p-6 rounded-lg font-mono text-xs sm:text-sm overflow-x-auto leading-relaxed shadow-inner">
+<pre>+---------------------------------------------------------+
+|                  1. Data Ingestion Stage                |
+|  - Phase 1: Local Credit Card CSV Upload                |
+|  - Phase 2: Plaid API automated background webhook      |
++---------------------------------------------------------+
+                            │
+                            ▼
++---------------------------------------------------------+
+|                2. Database Holding Area                 |
+|  - Raw, un-split transactions stored in Postgres        |
+|  - Budget state: Unaffected (is_processed = false)     |
++---------------------------------------------------------+
+                            │
+                            ▼
++---------------------------------------------------------+
+|               3. React Web App Dashboard                |
+|  - Darshan reviews un-split items on "free days"        |
+|  - Input splits (e.g. Total $100 -> $60 mine / $40 Logan)|
++---------------------------------------------------------+
+                            │
+            ┌───────────────┴───────────────┐
+            ▼                               ▼
++-----------------------+       +-----------------------+
+|  4. Local DB Update   |       | 5. Splitwise Sync Engine|
+| - Write splits to DB  |       | - Make POST call to   |
+| - is_processed = true |       |   Splitwise API       |
+| - Updates $800 limit  |       | - Logan gets pinged   |
++-----------------------+       +-----------------------+</pre>
+            </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section class="mb-10 page-break">
+            <h2 class="text-2xl font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                <span class="text-indigo-600">3.</span> Database Schema Design (PostgreSQL)
+            </h2>
+            <p class="text-slate-600 leading-relaxed mb-4">
+                This relational database structure supports multi-party splitting, tracking unprocessed imports, and linking to your outbound Splitwise logs.
+            </p>
+            <div class="bg-slate-900 text-emerald-400 p-6 rounded-lg font-mono text-xs sm:text-sm overflow-x-auto shadow-inner leading-relaxed">
+<pre><span class="text-slate-500">-- Core Accounts representation (Credit cards, cash, and IOU placeholders)</span>
+<span class="text-orange-400">CREATE TABLE</span> accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(<span class="text-purple-400">100</span>) NOT NULL, <span class="text-slate-500">-- e.g., 'TD Visa Infinite', 'Cash Wallet', 'Roommate Receivables'</span>
+    type VARCHAR(<span class="text-purple-400">50</span>) NOT NULL,   <span class="text-slate-500">-- e.g., 'credit_card', 'cash', 'asset_iou'</span>
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+<span class="text-slate-500">-- Master table for raw bank transactions</span>
+<span class="text-orange-400">CREATE TABLE</span> transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_date DATE NOT NULL,
+    merchant VARCHAR(<span class="text-purple-400">255</span>) NOT NULL,
+    original_amount DECIMAL(<span class="text-purple-400">10, 2</span>) NOT NULL, <span class="text-slate-500">-- The 100% cost as seen on the card</span>
+    currency VARCHAR(<span class="text-purple-400">10</span>) DEFAULT <span class="text-amber-300">'CAD'</span>,
+    payment_method_id UUID REFERENCES accounts(id),
+    is_processed BOOLEAN DEFAULT FALSE,     <span class="text-slate-500">-- Checked once you split the item</span>
+    external_bank_id VARCHAR(<span class="text-purple-400">255</span>),          <span class="text-slate-500">-- Unique ID from Plaid or CSV to prevent duplicates</span>
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+<span class="text-slate-500">-- Splits table (A single transaction has 1 or many split rows)</span>
+<span class="text-orange-400">CREATE TABLE</span> transaction_splits (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID REFERENCES transactions(id) ON DELETE CASCADE,
+    split_type VARCHAR(<span class="text-purple-400">50</span>) NOT NULL,        <span class="text-slate-500">-- 'personal_expense', 'roommate_iou'</span>
+    assigned_to_user VARCHAR(<span class="text-purple-400">100</span>) NOT NULL, <span class="text-slate-500">-- 'Darshan', 'Logan', 'Housemates Group'</span>
+    amount DECIMAL(<span class="text-purple-400">10, 2</span>) NOT NULL,         <span class="text-slate-500">-- The split portion (e.g., $60.00 or $40.00)</span>
+    splitwise_expense_id VARCHAR(<span class="text-purple-400">100</span>),      <span class="text-slate-500">-- Tracks corresponding ID in Splitwise</span>
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+<span class="text-slate-500">-- Optional: Cache Splitwise user/group configurations locally to accelerate your UI</span>
+<span class="text-orange-400">CREATE TABLE</span> splitwise_entities (
+    id VARCHAR(<span class="text-purple-400">100</span>) PRIMARY KEY,            <span class="text-slate-500">-- Splitwise internal User/Group ID</span>
+    name VARCHAR(<span class="text-purple-400">255</span>) NOT NULL,
+    type VARCHAR(<span class="text-purple-400">50</span>) NOT NULL               <span class="text-slate-500">-- 'friend' or 'group'</span>
+);</pre>
+            </div>
+        </section>
+
+        <!-- Section 4 -->
+        <section class="mb-10 page-break">
+            <h2 class="text-2xl font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                <span class="text-indigo-600">4.</span> Azure Boards Project Backlog Hierarchy
+            </h2>
+            <p class="text-slate-600 leading-relaxed mb-6">
+                This backlog is structured for direct import or manual entry into Azure DevOps, following the Epic to Feature to User Story to Task framework.
+            </p>
+
+            <!-- Epic 1 -->
+            <div class="mb-6 border border-slate-200 rounded-lg overflow-hidden">
+                <div class="bg-slate-100 px-4 py-3 font-semibold text-slate-800 flex items-center justify-between border-b">
+                    <span>Epic 1: Local Ledger Engine &amp; Database (The Foundation)</span>
+                    <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Target: Sprint 1</span>
+                </div>
+                <div class="p-4 space-y-4 text-sm">
+                    <div>
+                        <h4 class="font-bold text-slate-900">Feature 1.1: Database Infrastructure &amp; Schema</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As a developer, I want a relational database schema to hold transaction records, splits, and user profiles.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 1.1.1: Spin up a free serverless PostgreSQL instance on Neon or Railway.</li>
+                            <li>Task 1.1.2: Execute table migration scripts for schemas.</li>
+                            <li>Task 1.1.3: Seed the database with typical test records (Costco, Walmart, Cafe).</li>
+                        </ul>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h4 class="font-bold text-slate-900">Feature 1.2: CSV Data Ingestion Engine</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As Darshan, I want to parse bank credit card CSV exports so that my transactions automatically enter the system inbox.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 1.2.1: Create a Node.js Express template project with TypeScript support.</li>
+                            <li>Task 1.2.2: Write a modular CSV parsing service using csv-parser.</li>
+                            <li>Task 1.2.3: Write safe INSERT logic checking a composite key (date, amount, merchant) to ignore duplicate imports.</li>
+                            <li>Task 1.2.4: Create a secure route POST /api/transactions/upload.</li>
+                        </ul>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h4 class="font-bold text-slate-900">Feature 1.3: Core Budget Calculation Math</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As Darshan, I want the system to isolate my actual personal expenses so that I can see how close I am to my $800 monthly limit.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 1.3.1: Write a SQL/ORM query summing up personal splits for the current calendar month.</li>
+                            <li>Task 1.3.2: Create a dashboard status controller GET /api/budget/status.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Epic 2 -->
+            <div class="mb-6 border border-slate-200 rounded-lg overflow-hidden">
+                <div class="bg-slate-100 px-4 py-3 font-semibold text-slate-800 flex items-center justify-between border-b">
+                    <span>Epic 2: Splitwise Integration (The Automated Outbound Layer)</span>
+                    <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Target: Sprint 2</span>
+                </div>
+                <div class="p-4 space-y-4 text-sm">
+                    <div>
+                        <h4 class="font-bold text-slate-900">Feature 2.1: Splitwise API Client Setup</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As a developer, I want to connect securely to the Splitwise API so my backend can push transactions.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 2.1.1: Register a new custom application in the Splitwise Developer Portal.</li>
+                            <li>Task 2.1.2: Save API Consumer Keys and secrets in a local configuration file (.env).</li>
+                            <li>Task 2.1.3: Develop a secure authentication handler / client instance inside the application.</li>
+                        </ul>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h4 class="font-bold text-slate-900">Feature 2.2: Automated Expense Splitting Engine</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As Darshan, I want to assign a transaction split to a friend so that Splitwise automatically creates the IOU debt entry for them.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 2.2.1: Design service function mapping transaction_splits to the Splitwise request schema.</li>
+                            <li>Task 2.2.2: Implement outbound error handling to intercept network issues or failed API requests.</li>
+                            <li>Task 2.2.3: Write database update logic stamping splitwise_expense_id onto local database records.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Epic 3 -->
+            <div class="mb-6 border border-slate-200 rounded-lg overflow-hidden page-break">
+                <div class="bg-slate-100 px-4 py-3 font-semibold text-slate-800 flex items-center justify-between border-b">
+                    <span>Epic 3: Unified User Interface (The Control Panel)</span>
+                    <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Target: Sprint 3</span>
+                </div>
+                <div class="p-4 space-y-4 text-sm">
+                    <div>
+                        <h4 class="font-bold text-slate-900">Feature 3.1: The Unprocessed Inbox View</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As Darshan, I want a dedicated feed of unallocated transactions so I can quickly see what needs to be reviewed.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 3.1.1: Create a clean React dashboard page displaying an "Inbox".</li>
+                            <li>Task 3.1.2: Fetch all transactions where is_processed = false from the backend.</li>
+                            <li>Task 3.1.3: Build a scrollable list card components showing raw transactions.</li>
+                        </ul>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h4 class="font-bold text-slate-900">Feature 3.2: Interactive Split Selector</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As Darshan, I want to click an item and assign amounts to myself and roommates without doing mental math.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 3.2.1: Build an interactive Modal component triggered by selecting inbox rows.</li>
+                            <li>Task 3.2.2: Add preset shortcut buttons (50/50, 100% Personal, Custom amount inputs).</li>
+                            <li>Task 3.2.3: Build live state calculator showing remaining unassigned values.</li>
+                            <li>Task 3.2.4: Connect confirmation submit handlers to POST /api/transactions/:id/split.</li>
+                        </ul>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h4 class="font-bold text-slate-900">Feature 3.3: Visual Budget Progress Dashboard</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As Darshan, I want a clear visual progress bar tracking my real $800 limit so I know instantly if I need to slow down spending.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 3.3.1: Build a modern progress bar widget utilizing custom visual alerts for budget thresholds.</li>
+                            <li>Task 3.3.2: Display critical stats: Real Spending, Outgoing IOUs Pending, Days Remaining.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Epic 4 -->
+            <div class="mb-6 border border-slate-200 rounded-lg overflow-hidden">
+                <div class="bg-slate-100 px-4 py-3 font-semibold text-slate-800 flex items-center justify-between border-b">
+                    <span>Epic 4: Advanced Frictionless Ingestion (Plaid &amp; Voice Integration)</span>
+                    <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Target: Sprint 4</span>
+                </div>
+                <div class="p-4 space-y-4 text-sm">
+                    <div>
+                        <h4 class="font-bold text-slate-900">Feature 4.1: Live Bank Sync with Plaid</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As Darshan, I want my credit card transactions to sync automatically to my inbox so I do not have to download statements.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 4.1.1: Implement the frontend Plaid Link UI component in React.</li>
+                            <li>Task 4.1.2: Construct the webhook handler POST /api/plaid/webhook on Express.</li>
+                            <li>Task 4.1.3: Use Plaid's /transactions/sync endpoint to populate your local database.</li>
+                        </ul>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h4 class="font-bold text-slate-900">Feature 4.2: On-The-Go AI Voice Processing</h4>
+                        <p class="text-slate-500 italic mb-2">User Story: As Darshan, I want to dictate an expense split on my phone so it automatically processes without using a computer.</p>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600 pl-4">
+                            <li>Task 4.2.1: Integrate OpenAI's Whisper API to transcribe audio files.</li>
+                            <li>Task 4.2.2: Construct system prompt parsing sentences into structured JSON split objects.</li>
+                            <li>Task 4.2.3: Pipe output directly to endpoint to bypass inbox manual step.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section class="mb-10 page-break">
+            <h2 class="text-2xl font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                <span class="text-indigo-600">5.</span> Phase 1 Execution Details (Getting Started with Sprint 1)
+            </h2>
+            <p class="text-slate-600 leading-relaxed mb-4">
+                As planned, we are going to start with <strong>Sprint 1: The Core Database and CSV Parser</strong>. This allows us to get the system fully operational locally before writing any complex third-party authentication code.
+            </p>
+            <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                <h3 class="font-bold text-slate-900 mb-3">Recommended Steps to Initialize Sprint 1:</h3>
+                <ol class="list-decimal list-inside space-y-3 text-slate-600 text-sm">
+                    <li><strong class="text-slate-800">Initialize PostgreSQL Database:</strong> Spin up a free instance using Neon or Railway. Store the database connection string securely in a local `.env` file.</li>
+                    <li><strong class="text-slate-800">Boilerplate Set Up:</strong> Initialize a Node.js Express server with TypeScript.</li>
+                    <li><strong class="text-slate-800">Create Tables:</strong> Run the SQL creation script from Section 3 of this document to set up your tables.</li>
+                    <li><strong class="text-slate-800">Write the CSV Parser:</strong> Write a simple utility using `csv-parser` that takes a standard CSV download from your credit card company and outputs a clean JSON array mapping the Date, Merchant Name, and Amount.</li>
+                    <li><strong class="text-slate-800">Write Ingest Database Logic:</strong> Create a controller function that reads this JSON array and inserts each row into the `transactions` table (setting `is_processed = false` by default). Make sure you check for duplicates so you can upload the same CSV file repeatedly without messing up your ledger database.</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Section 6 -->
+        <section class="mb-6">
+            <h2 class="text-2xl font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                <span class="text-indigo-600">6.</span> Cloud Deployment Targets
+            </h2>
+            <p class="text-slate-600 leading-relaxed mb-4">
+                To keep your project completely free while ensuring a premium developer experience, deploy using the following cloud stack:
+            </p>
+            <ul class="space-y-3 text-slate-600 text-sm">
+                <li class="flex items-start gap-2">
+                    <span class="inline-block bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded text-xs mt-0.5">DB</span>
+                    <span><strong>Database (Neon):</strong> Serverless Postgres with a highly capable free tier that scales database compute engines to zero when idle.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="inline-block bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded text-xs mt-0.5">API</span>
+                    <span><strong>Backend Server (Railway):</strong> Provides automated deployments directly from your GitHub commits, isolated node runtimes, and easy environment variable setup.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="inline-block bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded text-xs mt-0.5">WEB</span>
+                    <span><strong>Frontend (Vercel):</strong> Fast static global CDN hosting for your React app dashboard. It auto-deploys on every git commit.</span>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- Simple Print Trigger Script -->
+    <script>
+        // Automatic setup details or console messages can go here.
+        console.log("Interactive Print Spec loaded successfully.");
+    </script>
+</body>
+</html>

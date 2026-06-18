@@ -1,0 +1,225 @@
+// Personal Expense Ledger & Social Debt Tracker — database schema.
+//
+// Core thesis encoded here:
+//   - Transaction = a payment event (who PAID, how much).
+//   - Allocation  = ownership of consumption (who CONSUMED a slice).
+//   - Settlement  = a debt-clearing event (money moving to zero a balance).
+// Budget and per-person balances are DERIVED from these tables, never stored.
+//
+// All money is stored as INTEGER CENTS (Int). Never floats.
+
+// Prisma 7 note: the connection `url` no longer lives here. It now lives in
+// `prisma.config.ts` (datasource.url) so the schema stays free of secrets and
+// the CLI/runtime read the URL from one place. See prisma.config.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// Prisma 7's modern generator. Unlike the legacy `prisma-client-js`, it emits
+// real ESM (proper named exports) into our own source tree, so `import {
+// PrismaClient } from "..."` works cleanly under "type": "module". The output
+// is generated code — we git-ignore it and regenerate via `prisma generate`.
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Where value sits (a store of value you own).
+enum AccountType {
+  credit_card
+  debit_card
+  cash
+  bank
+}
+
+/// What kind of payment event a transaction is.
+enum TransactionType {
+  purchase
+  refund
+  transfer
+  manual
+}
+
+/// Lifecycle of a transaction (richer than a processed/unprocessed boolean).
+enum TransactionStatus {
+  imported
+  needs_review
+  partially_allocated
+  allocated
+  ignored
+  refunded
+  duplicate
+  reconciled
+}
+
+/// How a transaction entered the system.
+enum TransactionSource {
+  csv
+  manual
+  plaid
+  ai
+}
+
+/// How a settlement (debt repayment) was carried out.
+enum SettlementMethod {
+  cash
+  e_transfer
+  card
+  offset
+  splitwise
+}
+
+// ---------------------------------------------------------------------------
+// People & accounts
+// ---------------------------------------------------------------------------
+
+/// A stable identity. `isMe = true` marks the budget owner (Darshan).
+model Person {
+  id              String   @id @default(uuid())
+  displayName     String
+  isMe            Boolean  @default(false)
+  splitwiseUserId String?
+  email           String?
+  createdAt       DateTime @default(now())
+
+  accounts         Account[]
+  paidTransactions Transaction[] @relation("Payer")
+  allocations      Allocation[]
+  settlementsFrom  Settlement[]  @relation("From")
+  settlementsTo    Settlement[]  @relation("To")
+}
+
+/// A wallet/card/bank account. Optional owner (defaults to "me" in practice).
+model Account {
+  id            String      @id @default(uuid())
+  name          String
+  type          AccountType
+  ownerPersonId String?
+  owner         Person?     @relation(fields: [ownerPersonId], references: [id])
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+
+  transactions Transaction[]
+}
+
+// ---------------------------------------------------------------------------
+// Classification & periods
+// ---------------------------------------------------------------------------
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  allocations Allocation[]
+}
+
+/// A budget window with a spending limit (so $800 is not hardcoded forever).
+model BudgetPeriod {
+  id         String   @id @default(uuid())
+  startDate  DateTime @db.Date
+  endDate    DateTime @db.Date
+  limitCents Int
+  currency   String   @default("CAD")
+  createdAt  DateTime @default(now())
+
+  @@unique([startDate, endDate])
+}
+
+/// One CSV/Plaid import batch (provenance + duplicate auditing).
+model Import {
+  id         String            @id @default(uuid())
+  source     TransactionSource @default(csv)
+  fileName   String?
+  rowCount   Int               @default(0)
+  importedAt DateTime          @default(now())
+
+  transactions Transaction[]
+}
+
+// ---------------------------------------------------------------------------
+// The three event/interpretation tables
+// ---------------------------------------------------------------------------
+
+/// A payment event. `payerPersonId` (required) is who fronted the money —
+/// this is what makes "someone paid for me" and debt direction work.
+model Transaction {
+  id               String  @id @default(uuid())
+  payerPersonId    String
+  payer            Person  @relation("Payer", fields: [payerPersonId], references: [id])
+  paymentAccountId String?
+  paymentAccount   Account? @relation(fields: [paymentAccountId], references: [id])
+
+  merchant    String?
+  description String?
+  amountCents Int      // negative allowed (refunds). Integer cents only.
+  currency    String   @default("CAD")
+  expenseDate DateTime @db.Date
+
+  type   TransactionType   @default(purchase)
+  status TransactionStatus @default(needs_review)
+  source TransactionSource @default(csv)
+
+  externalId String? // bank/Plaid id, used for idempotent import
+  importId   String?
+  import     Import? @relation(fields: [importId], references: [id])
+
+  refundOfId String?       // links a refund back to its original transaction
+  refundOf   Transaction?  @relation("Refunds", fields: [refundOfId], references: [id])
+  refunds    Transaction[] @relation("Refunds")
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  allocations Allocation[]
+
+  @@unique([paymentAccountId, externalId]) // re-importing the same row is a no-op
+  @@index([expenseDate])
+  @@index([status])
+  @@index([payerPersonId])
+}
+
+/// Ownership of a slice of consumption. The bridge between a payment event
+/// and both the budget and the debt balances.
+model Allocation {
+  id            String      @id @default(uuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  personId      String
+  person        Person      @relation(fields: [personId], references: [id])
+
+  amountCents  Int       // negative allowed (refunds)
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id])
+  budgetImpact Boolean   @default(false)
+  expenseDate  DateTime  @db.Date // denormalized from the transaction; overridable
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([personId, budgetImpact, expenseDate]) // powers the budget query
+  @@index([transactionId])
+}
+
+/// A debt-clearing event. Amount is always positive; direction is from -> to.
+model Settlement {
+  id             String           @id @default(uuid())
+  fromPersonId   String
+  fromPerson     Person           @relation("From", fields: [fromPersonId], references: [id])
+  toPersonId     String
+  toPerson       Person           @relation("To", fields: [toPersonId], references: [id])
+  amountCents    Int              // strictly > 0 (enforced via CHECK in migration)
+  currency       String           @default("CAD")
+  settlementDate DateTime         @db.Date
+  method         SettlementMethod
+  note           String?
+  createdAt      DateTime         @default(now())
+
+  @@index([fromPersonId])
+  @@index([toPersonId])
+}

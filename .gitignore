@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+
+# Environment — NEVER commit real secrets
+.env
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Office temp/lock files
+~$*
+
+# Prisma local artifacts
+/prisma/*.db
+
+# Generated Prisma Client (regenerate with `prisma generate`)
+/src/generated/

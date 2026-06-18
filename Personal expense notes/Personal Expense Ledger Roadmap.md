@@ -1,0 +1,163 @@
+<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'><title>Personal Expense Ledger Roadmap</title><style>
+
+:root{--bg:#f1f5f9;--ink:#0f172a;--muted:#64748b;--card:#fff;--line:#e5e7eb;--blue:#2563eb;--green:#16a34a;--amber:#d97706;--red:#dc2626;--code:#0b1220}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif;line-height:1.58}header{background:linear-gradient(135deg,#0f172a,#1e3a8a,#2563eb);color:white;padding:52px 24px}.wrap{max-width:1120px;margin:auto}h1{font-size:clamp(34px,5vw,56px);line-height:1.05;margin:12px 0 14px}h2{font-size:28px;margin-top:0}h3{margin-top:0}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:800;opacity:.82}.subtitle{font-size:18px;max-width:900px;opacity:.93}main{padding:26px 24px 60px}section{background:var(--card);border:1px solid var(--line);border-radius:20px;margin:22px auto;padding:28px;box-shadow:0 10px 28px rgba(15,23,42,.06)}.grid{display:grid;gap:16px}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:850px){.grid2,.grid3{grid-template-columns:1fr}}.card{border:1px solid var(--line);border-radius:16px;padding:18px;background:white}.blue{background:#eff6ff;border-color:#bfdbfe}.green{background:#ecfdf5;border-color:#bbf7d0}.yellow{background:#fffbeb;border-color:#fde68a}.red{background:#fef2f2;border-color:#fecaca}.callout{border-left:5px solid var(--blue);background:#eff6ff;border-radius:12px;padding:16px 18px}.callout.good{border-color:var(--green);background:#ecfdf5}.callout.warn{border-color:var(--amber);background:#fffbeb}.pill{display:inline-flex;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;margin:4px 5px 4px 0;background:#e2e8f0}.pill.blue{background:#dbeafe;color:#1d4ed8}.pill.green{background:#dcfce7;color:#166534}.pill.amber{background:#fef3c7;color:#92400e}pre,.diagram{background:var(--code);color:#e5e7eb;border-radius:14px;padding:18px;overflow:auto;font-family:Cascadia Code,Consolas,monospace;font-size:13px;line-height:1.45;white-space:pre}table{border-collapse:collapse;width:100%;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:14px 0}th,td{border-bottom:1px solid var(--line);padding:12px;text-align:left;vertical-align:top}th{background:#f8fafc;text-transform:uppercase;letter-spacing:.05em;font-size:13px}tr:last-child td{border-bottom:0}li{margin:7px 0}footer{text-align:center;color:var(--muted);font-size:13px;padding:24px}.phase{border-left:5px solid var(--blue)}
+
+</style></head><body>
+
+<header><div class='wrap'><div class='eyebrow'>Personal Finance Automation Project</div><h1>Personal Expense Ledger & Social Debt Roadmap</h1><p class='subtitle'>A practical architecture for tracking a strict $800 personal spending limit when credit cards, shared groceries, cash reimbursements, and friend IOUs are all mixed together.</p><span class='pill blue'>Budget-first</span><span class='pill green'>CSV MVP</span><span class='pill amber'>Splitwise later</span><span class='pill'>PWA-ready</span><span class='pill'>AI voice later</span></div></header>
+
+<main class='wrap'>
+
+<section><h2>1. Executive Summary</h2><p>This project should not be treated as a normal budget tracker. Your credit card statement shows <b>cash flow</b>, while your monthly $800 limit should track <b>personal consumption</b>. These are different things.</p><div class='callout good'><b>Core thesis:</b> Transactions are payment events. Allocations are ownership of consumption. Settlements are debt-clearing events. Your budget is calculated only from your personal allocations.</div><p>The app should let you import card transactions quickly, leave them in an inbox, and split them later when you have time. It must also handle the reverse case where someone else paid for something that belongs to you.</p></section>
+
+<section><h2>2. The Real-World Problem Model</h2><div class='grid grid2'><div class='card blue'><h3>What appears on your card</h3><ul><li>Personal spending</li><li>Groceries bought for the house</li><li>Items bought for someone else</li><li>Refunds and adjustments</li><li>Full shared bills that are not fully yours</li></ul></div><div class='card green'><h3>What your budget should count</h3><ul><li>Your share of groceries</li><li>Your meals, coffee, transit, subscriptions</li><li>Your share of expenses paid by someone else</li><li>Manual cash expenses</li><li>Not the full shared bill</li></ul></div></div><p>The app must preserve the difference between <b>paid by me</b>, <b>consumed by me</b>, <b>owed to me</b>, and <b>owed by me</b>.</p></section>
+
+<section><h2>3. Non-Negotiable Product Principles</h2><div class='grid grid3'><div class='card'><h3>Inbox first</h3><p>You should be able to import transactions without splitting immediately. Busy life is a product requirement.</p></div><div class='card'><h3>Budget from allocations</h3><p>The $800 tracker must sum only your personal allocation lines, not raw credit card totals.</p></div><div class='card'><h3>Manual entries matter</h3><p>If someone else paid for you, it must still count against your budget even though it never touched your card.</p></div><div class='card'><h3>Settlements are first-class</h3><p>Cash, e-transfer, and offset repayments must be tracked explicitly rather than hidden as notes.</p></div><div class='card'><h3>Splitwise is not the ledger</h3><p>Your local ledger should be the source of truth. Splitwise is a communication/sync layer.</p></div><div class='card'><h3>AI is just an input method</h3><p>Voice/AI should call the same backend services as the UI.</p></div></div></section>
+
+<section><h2>4. Recommended Architecture</h2><p>For a solo project, use a <b>Next.js PWA + PostgreSQL + Prisma/Drizzle</b> architecture. It keeps the web UI, backend routes, mobile-friendly app, and database access in one maintainable codebase.</p><div class='diagram'>Next.js PWA
+
+  Dashboard | Inbox | Split Modal | Balances | Mobile Quick Add
+
+        |
+
+        v
+
+Application Services
+
+  Import | Allocation | Budget | Settlement | Balance | Splitwise Sync | AI Parser later
+
+        |
+
+        v
+
+PostgreSQL
+
+  transactions | allocations | settlements | people | groups | categories | imports | budget_periods | sync_events
+
+        |
+
+        v
+
+External Integrations
+
+  Splitwise API | Plaid/Open Banking later | Speech-to-text/LLM later</div></section>
+
+<section><h2>5. Recommended Tech Stack</h2><table><tr><th>Layer</th><th>Choice</th><th>Reason</th></tr><tr><td>Frontend + backend</td><td>Next.js</td><td>One codebase for UI, API routes/server actions, PWA, and deployment simplicity.</td></tr><tr><td>Database</td><td>PostgreSQL</td><td>Reliable relational model for ledger-style data, splits, settlements, and reporting.</td></tr><tr><td>ORM</td><td>Prisma or Drizzle</td><td>Prisma is productive; Drizzle is lighter and more SQL-like.</td></tr><tr><td>Deployment</td><td>Vercel + Neon/Supabase Postgres</td><td>Simple hosted setup for a personal app.</td></tr><tr><td>Mobile</td><td>PWA first</td><td>Phone-friendly without native app overhead.</td></tr><tr><td>AI voice</td><td>Speech-to-text + LLM JSON parser later</td><td>Voice becomes a thin input layer over stable APIs.</td></tr></table></section>
+
+<section><h2>6. Core Data Model</h2><p>The database should support three separate concepts: payment events, consumption ownership, and debt settlement.</p><div class='grid grid2'><div class='card'><h3>transactions</h3><pre>id
+
+transaction_date
+
+description
+
+merchant
+
+amount
+
+currency
+
+source_type
+
+payment_account_id
+
+import_id
+
+external_id
+
+status
+
+notes
+
+created_at</pre></div><div class='card'><h3>allocations</h3><pre>id
+
+transaction_id
+
+person_id
+
+amount
+
+category_id
+
+allocation_type
+
+budget_impact
+
+splitwise_sync_status
+
+splitwise_expense_id
+
+created_at</pre></div><div class='card'><h3>settlements</h3><pre>id
+
+settlement_date
+
+from_person_id
+
+to_person_id
+
+amount
+
+currency
+
+method
+
+notes
+
+created_at</pre></div><div class='card'><h3>people</h3><pre>id
+
+display_name
+
+is_me
+
+splitwise_user_id
+
+email
+
+created_at</pre></div></div><h3>Other important tables</h3><ul><li><b>accounts:</b> credit cards, cash wallet, bank accounts, manual accounts.</li><li><b>categories:</b> groceries, eating out, transit, household, entertainment.</li><li><b>budget_periods:</b> start date, end date, limit amount, currency.</li><li><b>imports:</b> CSV metadata, source, timestamp, row counts.</li><li><b>sync_events:</b> Splitwise sync attempts, statuses, errors, retries.</li><li><b>groups/group_members:</b> useful for housemates and recurring splits.</li></ul></section>
+
+<section><h2>7. Budget and Balance Rules</h2><div class='callout'><b>Budget calculation:</b> monthly personal spend = sum of allocations where person is you and budget_impact is true within the budget period.</div><pre>monthly_personal_spend = SUM(allocations.amount)
+
+WHERE allocations.person_id = Darshan
+
+AND allocations.budget_impact = true
+
+AND allocation_date BETWEEN budget_period.start_date AND budget_period.end_date</pre><table><tr><th>Metric</th><th>Meaning</th></tr><tr><td>Personal spending</td><td>What you consumed and should count toward $800.</td></tr><tr><td>Card cash flow</td><td>What hit your credit card or cash account.</td></tr><tr><td>People owe me</td><td>Receivables created when you paid for others.</td></tr><tr><td>I owe others</td><td>Payables created when someone else paid for you.</td></tr><tr><td>Unreviewed exposure</td><td>Imported transactions not allocated yet.</td></tr></table></section>
+
+<section><h2>8. Key User Flows</h2><div class='grid grid2'><div class='card blue'><h3>You paid for shared groceries</h3><ol><li>CSV import creates a $120 Walmart transaction.</li><li>Transaction appears in inbox.</li><li>Later, allocate $45 to yourself, $40 to Logan, $35 to Rahul.</li><li>Your budget increases by $45 only.</li><li>Others' balances show amounts owed to you.</li><li>Optional: push to Splitwise.</li></ol></div><div class='card green'><h3>Someone else paid for you</h3><ol><li>Manual entry: Rahul paid $32 dinner, your share $16.</li><li>App creates a payable to Rahul.</li><li>Your budget increases by $16.</li><li>No credit card transaction is required.</li></ol></div><div class='card yellow'><h3>Cash reimbursement</h3><ol><li>Logan owes you $40.</li><li>He gives you $25 cash.</li><li>Record settlement: Logan to Darshan, $25, cash.</li><li>Remaining balance: Logan owes $15.</li><li>Your $800 budget does not change.</li></ol></div><div class='card'><h3>Offset settlement</h3><ol><li>You owe Ankit $20.</li><li>Ankit owes you $30.</li><li>App shows net: Ankit owes you $10.</li><li>Record offset or show net balance.</li></ol></div></div></section>
+
+<section><h2>9. API Surface for MVP</h2><pre>POST   /api/imports/csv
+
+GET    /api/transactions?status=needs_review
+
+POST   /api/transactions/manual
+
+GET    /api/transactions/:id
+
+POST   /api/transactions/:id/allocations
+
+PATCH  /api/allocations/:id
+
+DELETE /api/allocations/:id
+
+GET    /api/budget/current
+
+GET    /api/balances/people
+
+POST   /api/settlements
+
+GET    /api/settlements
+
+POST   /api/splitwise/sync/:allocationId    # later
+
+POST   /api/ai/parse-command                # later</pre></section>
+
+<section><h2>10. Phased Roadmap</h2><div class='card phase'><h3>Phase 0 - Ledger validation</h3><p><span class='pill blue'>Goal</span> Prove the model handles messy life before building too much UI.</p><ul><li>Write sample scenarios: shared groceries, cash repayment, someone paid for you, refund, partial settlement, offset, month boundary.</li><li>Confirm each scenario can be represented by transactions, allocations, and settlements.</li><li>Decide default categories and budget period.</li></ul><p><b>Exit:</b> You can manually calculate correct personal spend and balances from the model.</p></div><div class='card phase'><h3>Phase 1 - Local MVP</h3><ul><li>Create Next.js project with Postgres and ORM.</li><li>Create tables: people, accounts, transactions, allocations, categories, budget_periods, imports.</li><li>Build CSV import with duplicate detection.</li><li>Build transaction inbox and allocation modal.</li><li>Build current month budget dashboard.</li><li>Add manual transaction entry.</li></ul><p><b>Exit:</b> Upload a statement, allocate later, and see true monthly spend.</p></div><div class='card phase'><h3>Phase 2 - Settlements and balances</h3><ul><li>Add settlements table and UI.</li><li>Support cash, e-transfer, card, and offset settlements.</li><li>Build people balance page.</li><li>Support partial settlements and corrections.</li></ul><p><b>Exit:</b> You can answer who owes whom at any time.</p></div><div class='card phase'><h3>Phase 3 - Splitwise sync</h3><ul><li>Add Splitwise identity mapping.</li><li>Add sync_events table.</li><li>Implement create expense for selected allocations.</li><li>Store external IDs, statuses, errors, retry data.</li></ul><p><b>Exit:</b> Local splits can be pushed safely and retried.</p></div><div class='card phase'><h3>Phase 4 - Mobile-first PWA</h3><ul><li>Responsive dashboard and inbox.</li><li>Quick add manual expense flow.</li><li>Add to Home Screen support.</li><li>Optional offline draft entry.</li></ul><p><b>Exit:</b> Most quick events can be recorded from your phone.</p></div><div class='card phase'><h3>Phase 5 - AI voice input</h3><ul><li>Use phone speech-to-text or transcription.</li><li>Parse natural language into structured JSON.</li><li>Show confirmation before saving.</li><li>Support commands like "Logan paid me $40 cash".</li></ul><p><b>Exit:</b> Common expense and settlement commands can be captured quickly.</p></div><div class='card phase'><h3>Phase 6 - Bank sync only if still needed</h3><ul><li>Evaluate Plaid/open banking options carefully.</li><li>Implement account linking only after security tradeoffs are acceptable.</li><li>Use sync only to populate the same inbox.</li><li>Keep CSV as fallback.</li></ul></div></section>
+
+<section><h2>11. What Not to Build Too Early</h2><div class='grid grid2'><div class='card red'><h3>Do not start with Plaid</h3><p>Bank sync adds auth, security, consent, webhook, and cost complexity. CSV is enough to validate.</p></div><div class='card red'><h3>Do not start with native mobile</h3><p>A PWA likely solves the phone need first.</p></div><div class='card red'><h3>Do not let AI mutate data blindly</h3><p>AI should draft structured entries and ask for confirmation.</p></div><div class='card red'><h3>Do not make Splitwise the ledger</h3><p>Your budget logic should live locally.</p></div></div></section>
+
+<section><h2>12. Success Metrics</h2><ul><li>Upload a credit card CSV and deduplicate repeat imports.</li><li>Leave transactions unreviewed without breaking the budget.</li><li>Allocate one transaction across yourself and multiple people.</li><li>Record expenses someone else paid for you.</li><li>Record cash/e-transfer settlements.</li><li>See per-person net balances.</li><li>Use the app weekly without creating more work than it saves.</li></ul></section>
+
+<section><h2>13. Final Recommendation</h2><div class='callout good'>Build this, but build the ledger foundation first. The project becomes valuable as soon as it can answer: <b>How much have I personally spent this month, and who owes whom?</b></div><p>Everything else - Splitwise, AI, mobile, and automatic bank import - should be layered on top of that stable foundation.</p></section>
+
+</main><footer>Generated roadmap for Darshan Jain - Personal Expense Ledger Project</footer>
+
+</body></html>
