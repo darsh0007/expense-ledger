@@ -156,7 +156,8 @@ form.purchase label {
 }
 
 form.purchase input,
-form.purchase select {
+form.purchase select,
+form.purchase textarea {
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -164,6 +165,12 @@ form.purchase select {
   color: var(--text);
   font-size: 0.95rem;
   width: 100%;
+}
+
+form.purchase textarea {
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
 }
 
 form.purchase .participants {
@@ -292,6 +299,33 @@ button.refund {
 button.refund:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+button.review-mine,
+button.review-ignore {
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button.review-mine {
+  background: var(--accent);
+  color: #06283d;
+  border: none;
+}
+
+button.review-ignore {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+button.review-ignore:hover {
+  border-color: var(--bad);
+  color: var(--bad);
 }
 
 .period-switch,

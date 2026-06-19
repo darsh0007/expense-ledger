@@ -317,6 +317,93 @@ export async function createSettlement(input: NewSettlement): Promise<Settlement
   return toDomainSettlement(row);
 }
 
+/** A row parsed from a statement, ready to import as a needs_review transaction. */
+export interface ImportedRow {
+  expenseDate: Date;
+  merchant: string | null;
+  amountCents: number;
+}
+
+/**
+ * Bulk-import statement rows as `needs_review` transactions inside one Import
+ * batch (provenance). No allocations yet — an imported row has no ownership
+ * until it's reviewed, so it stays out of the budget and balances but shows as
+ * "unreviewed exposure". Returns how many rows were imported.
+ */
+export async function createImportedTransactions(
+  payerPersonId: string,
+  fileName: string | null,
+  rows: ImportedRow[],
+): Promise<number> {
+  if (rows.length === 0) return 0;
+  await prisma.import.create({
+    data: {
+      source: "csv",
+      fileName,
+      rowCount: rows.length,
+      transactions: {
+        create: rows.map((r) => ({
+          payerPersonId,
+          amountCents: r.amountCents,
+          merchant: r.merchant,
+          expenseDate: r.expenseDate,
+          type: "purchase",
+          status: "needs_review",
+          source: "csv",
+        })),
+      },
+    },
+  });
+  return rows.length;
+}
+
+/** The review queue: imported transactions awaiting an ownership decision. */
+export async function listReviewQueue(): Promise<TransactionListItem[]> {
+  const rows = await prisma.transaction.findMany({
+    where: { deletedAt: null, status: "needs_review" },
+    orderBy: { expenseDate: "asc" },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    merchant: r.merchant,
+    amountCents: r.amountCents,
+    expenseDate: r.expenseDate,
+    type: r.type,
+    status: r.status,
+  }));
+}
+
+/**
+ * Review decision "all mine": allocate the whole transaction to me with budget
+ * impact, and mark it allocated. Clears any prior allocations first so it's
+ * idempotent.
+ */
+export async function allocateTransactionToMe(id: string, meId: string): Promise<void> {
+  const tx = await prisma.transaction.findUnique({ where: { id } });
+  if (!tx) throw new Error(`Transaction not found: ${id}`);
+  await prisma.allocation.deleteMany({ where: { transactionId: id } });
+  await prisma.transaction.update({
+    where: { id },
+    data: {
+      status: "allocated",
+      allocations: {
+        create: {
+          personId: meId,
+          amountCents: tx.amountCents,
+          budgetImpact: true,
+          expenseDate: tx.expenseDate,
+        },
+      },
+    },
+  });
+}
+
+/** Review decision "ignore": keep the record but exclude it from everything. */
+export async function ignoreTransaction(id: string): Promise<void> {
+  await prisma.allocation.deleteMany({ where: { transactionId: id } });
+  await prisma.transaction.update({ where: { id }, data: { status: "ignored" } });
+}
+
 /** The three event streams the projections run over. */
 export interface LedgerData {
   transactions: Transaction[];

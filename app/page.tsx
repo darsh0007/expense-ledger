@@ -3,6 +3,7 @@ import {
   listBudgetPeriods,
   listPeople,
   listRecentTransactions,
+  listReviewQueue,
   listTrashedTransactions,
   purgeTrashedBefore,
 } from "../src/repository/ledger.js";
@@ -14,8 +15,11 @@ import {
   addCustomPurchase,
   addSettlement,
   destroyTransaction,
+  importStatement,
   refundTransaction,
   removeTransaction,
+  reviewAllocateToMe,
+  reviewIgnore,
   undoRemoveTransaction,
 } from "./actions.js";
 import { ConfirmButton } from "./ConfirmButton.js";
@@ -91,12 +95,13 @@ export default async function DashboardPage({
   }
 
   // Read path: Service -> Repository -> Domain, exactly like the report script.
-  const [summary, people, accounts, recent, trashed] = await Promise.all([
+  const [summary, people, accounts, recent, trashed, reviewQueue] = await Promise.all([
     computePeriodSummary(selected.id),
     listPeople(),
     listAccounts(),
     listRecentTransactions(8),
     listTrashedTransactions(),
+    listReviewQueue(),
   ]);
 
   const nameById = new Map(people.map((p) => [p.id, p.displayName]));
@@ -291,6 +296,74 @@ export default async function DashboardPage({
           exclude them. Your share is the only part that hits your budget.
         </p>
       </section>
+
+      <section className="card">
+        <h2>Import statement (CSV)</h2>
+        <form className="purchase" action={importStatement}>
+          <div className="field">
+            <label htmlFor="csv-file">Upload CSV file</label>
+            <input id="csv-file" name="file" type="file" accept=".csv,text/csv" />
+          </div>
+          <div className="field">
+            <label htmlFor="csv-text">…or paste rows</label>
+            <textarea
+              id="csv-text"
+              name="csv"
+              rows={4}
+              placeholder={"Date,Description,Amount\n2026-07-01,Costco,123.45"}
+            />
+          </div>
+          <button type="submit">Import</button>
+        </form>
+        <p className="muted hint">
+          Imported rows land in the review queue as &ldquo;needs review&rdquo;.
+          They don&apos;t touch your budget until you decide who they belong to.
+        </p>
+      </section>
+
+      {reviewQueue.length > 0 && (
+        <section className="card">
+          <h2>Review queue ({reviewQueue.length})</h2>
+          <p className="muted hint" style={{ marginTop: 0, marginBottom: 12 }}>
+            Decide who each imported charge belongs to.
+          </p>
+          <ul className="people">
+            {reviewQueue.map((t) => (
+              <li
+                key={t.id}
+                className="row activity"
+                style={{ padding: "10px 0" }}
+              >
+                <span className="label">
+                  {t.merchant ?? "(no merchant)"}
+                  <span className="muted">
+                    {" "}· {t.expenseDate.toISOString().slice(0, 10)}
+                  </span>
+                </span>
+                <span className="activity-right">
+                  <span className="value">{fmt(t.amountCents)}</span>
+                  <form action={reviewAllocateToMe} className="inline-delete">
+                    <input type="hidden" name="transactionId" value={t.id} />
+                    <button type="submit" className="review-mine" title="All mine">
+                      Mine
+                    </button>
+                  </form>
+                  <form action={reviewIgnore} className="inline-delete">
+                    <input type="hidden" name="transactionId" value={t.id} />
+                    <button
+                      type="submit"
+                      className="review-ignore"
+                      title="Not my spending"
+                    >
+                      Ignore
+                    </button>
+                  </form>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>Recent activity</h2>

@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import type { SettlementMethod } from "../src/domain/index.js";
 import {
+  allocateTransactionToMe,
   createBudgetPeriod,
   createFullRefund,
+  createImportedTransactions,
   createPerson,
   getMe,
   hardDeleteTransaction,
+  ignoreTransaction,
   restoreTransaction,
   softDeleteTransaction,
 } from "../src/repository/ledger.js";
@@ -17,6 +20,7 @@ import {
   recordEqualSplitPurchase,
 } from "../src/services/transactions.js";
 import { recordSettlement } from "../src/services/settlements.js";
+import { parseStatementCsv } from "../src/services/import.js";
 
 /**
  * Server Action: runs ONLY on the server. The browser never sees this code — it
@@ -195,6 +199,51 @@ export async function addBudgetPeriod(formData: FormData): Promise<void> {
     endDate,
     limitCents,
   });
+
+  revalidatePath("/");
+}
+
+/**
+ * Server Action: import a CSV statement. Accepts either an uploaded file or
+ * pasted text; parses it into rows and stores them as `needs_review`
+ * transactions for the review queue.
+ */
+export async function importStatement(formData: FormData): Promise<void> {
+  const me = await getMe();
+
+  const pasted = String(formData.get("csv") ?? "").trim();
+  const file = formData.get("file");
+  let text = pasted;
+  let fileName: string | null = null;
+  if (!text && file && typeof file !== "string" && file.size > 0) {
+    text = await file.text();
+    fileName = file.name || null;
+  }
+  if (!text) return;
+
+  const rows = parseStatementCsv(text);
+  await createImportedTransactions(me.id, fileName, rows);
+
+  revalidatePath("/");
+}
+
+/** Server Action (review): allocate an imported transaction entirely to me. */
+export async function reviewAllocateToMe(formData: FormData): Promise<void> {
+  const me = await getMe();
+  const id = String(formData.get("transactionId") ?? "");
+  if (!id) return;
+
+  await allocateTransactionToMe(id, me.id);
+
+  revalidatePath("/");
+}
+
+/** Server Action (review): mark an imported transaction as ignored. */
+export async function reviewIgnore(formData: FormData): Promise<void> {
+  const id = String(formData.get("transactionId") ?? "");
+  if (!id) return;
+
+  await ignoreTransaction(id);
 
   revalidatePath("/");
 }
