@@ -6,7 +6,7 @@
   "description": "Personal Expense Ledger & Social Debt Tracker",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
