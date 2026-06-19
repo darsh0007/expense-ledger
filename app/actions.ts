@@ -12,6 +12,7 @@ import {
 } from "../src/repository/ledger.js";
 import {
   dollarsToCents,
+  recordCustomSplitPurchase,
   recordEqualSplitPurchase,
 } from "../src/services/transactions.js";
 import { recordSettlement } from "../src/services/settlements.js";
@@ -52,11 +53,36 @@ export async function addPurchase(formData: FormData): Promise<void> {
   const participantIds = formData.getAll("participants").map(String);
   const ids = participantIds.length > 0 ? participantIds : [me.id];
 
-  await recordEqualSplitPurchase({
+  revalidatePath("/");
+}
+
+/**
+ * Server Action: record a purchase split by explicit per-person amounts. Each
+ * person's input arrives as a field named `amount_<personId>`; blanks and zeros
+ * are skipped. The sum of the entered amounts is the transaction total.
+ */
+export async function addCustomPurchase(formData: FormData): Promise<void> {
+  const me = await getMe();
+
+  const merchant = String(formData.get("merchant") ?? "").trim() || undefined;
+  const accountId = String(formData.get("paymentAccountId") ?? "");
+  const dateStr = String(formData.get("expenseDate") ?? "");
+  const expenseDate = dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date();
+
+  const shares: { personId: string; amountCents: number }[] = [];
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("amount_")) continue;
+    const raw = String(value).trim();
+    if (!raw) continue;
+    const amountCents = dollarsToCents(raw);
+    if (amountCents <= 0) continue;
+    shares.push({ personId: key.slice("amount_".length), amountCents });
+  }
+
+  await recordCustomSplitPurchase({
     payerId: me.id,
     meId: me.id,
-    amountCents,
-    participantIds: ids,
+    shares,
     paymentAccountId: accountId || null,
     merchant,
     expenseDate,

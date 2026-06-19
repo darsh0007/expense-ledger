@@ -11,6 +11,7 @@ import {
   addBudgetPeriod,
   addPerson,
   addPurchase,
+  addCustomPurchase,
   addSettlement,
   destroyTransaction,
   removeTransaction,
@@ -225,6 +226,68 @@ export default async function DashboardPage({
           Only your own share counts toward the ${""}
           {(summary.budget.limitCents / 100).toFixed(0)} budget; everyone else&apos;s
           share becomes what they owe you.
+        </p>
+      </section>
+
+      <section className="card">
+        <h2>Record a custom split</h2>
+        <form className="purchase" action={addCustomPurchase}>
+          <div className="field">
+            <label htmlFor="custom-merchant">Merchant / note</label>
+            <input
+              id="custom-merchant"
+              name="merchant"
+              placeholder="e.g. dinner — uneven shares"
+              maxLength={120}
+              autoComplete="off"
+            />
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="custom-date">Date</label>
+              <input
+                id="custom-date"
+                name="expenseDate"
+                type="date"
+                defaultValue={today}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="custom-account">Paid with</label>
+              <select id="custom-account" name="paymentAccountId" defaultValue="">
+                <option value="">— account —</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="field">
+            <label>Each person&apos;s share ($)</label>
+            <div className="shares">
+              {people.map((p) => (
+                <div key={p.id} className="share-row">
+                  <span className="share-name">
+                    {p.displayName}
+                    {p.isMe && <span className="badge">me</span>}
+                  </span>
+                  <input
+                    name={`amount_${p.id}`}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    autoComplete="off"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <button type="submit">Record custom split</button>
+        </form>
+        <p className="muted hint">
+          The total is whatever the shares add up to. Leave someone blank to
+          exclude them. Your share is the only part that hits your budget.
         </p>
       </section>
 

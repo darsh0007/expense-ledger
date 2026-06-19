@@ -190,6 +190,29 @@ form.purchase .check input {
   width: auto;
 }
 
+form.purchase .shares {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+form.purchase .share-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+form.purchase .share-name {
+  flex: 1;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+form.purchase .share-row input {
+  flex: 0 0 120px;
+  width: 120px;
+}
+
 form.purchase button {
   background: var(--accent);
   color: #06283d;

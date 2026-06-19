@@ -113,3 +113,78 @@ export async function recordEqualSplitPurchase(
     allocations,
   });
 }
+
+export interface CustomSplitShare {
+  personId: string;
+  amountCents: number;
+}
+
+export interface CustomSplitPurchaseInput {
+  payerId: string;
+  meId: string;
+  /** Explicit per-person amounts. Their sum IS the transaction total. */
+  shares: CustomSplitShare[];
+  paymentAccountId?: string | null;
+  merchant?: string;
+  expenseDate: Date;
+  categoryId?: string | null;
+}
+
+/**
+ * Record a purchase split by EXPLICIT per-person amounts (not evenly). The total
+ * is the sum of the shares, so conservation holds by construction; we still run
+ * the domain guard as a belt-and-suspenders check. Only my own share counts
+ * toward the budget; the rest become debts.
+ */
+export async function recordCustomSplitPurchase(
+  input: CustomSplitPurchaseInput,
+): Promise<Transaction> {
+  const shares = input.shares.filter((s) => s.amountCents > 0);
+  if (shares.length === 0) {
+    throw new Error("Enter at least one person's share.");
+  }
+  const amountCents = shares.reduce((sum, s) => sum + s.amountCents, 0);
+
+  const allocations: NewAllocation[] = shares.map((s) => ({
+    personId: s.personId,
+    amountCents: s.amountCents,
+    budgetImpact: s.personId === input.meId,
+    categoryId: input.categoryId ?? null,
+    expenseDate: input.expenseDate,
+  }));
+
+  const draftTx: Transaction = {
+    id: "draft",
+    payerPersonId: input.payerId,
+    amountCents,
+    expenseDate: input.expenseDate,
+    status: "allocated",
+    type: "purchase",
+  };
+  const draftAllocations: Allocation[] = allocations.map((a, i) => ({
+    id: `draft-${i}`,
+    transactionId: "draft",
+    personId: a.personId,
+    amountCents: a.amountCents,
+    categoryId: a.categoryId,
+    budgetImpact: a.budgetImpact,
+    expenseDate: a.expenseDate,
+  }));
+  const check = validateConservation(draftTx, draftAllocations);
+  if (!check.ok) {
+    throw new Error(
+      `Allocation mismatch: expected ${check.expectedCents}, got ${check.actualCents}.`,
+    );
+  }
+
+  return createTransactionWithAllocations({
+    payerPersonId: input.payerId,
+    paymentAccountId: input.paymentAccountId ?? null,
+    amountCents,
+    merchant: input.merchant ?? null,
+    expenseDate: input.expenseDate,
+    type: "purchase",
+    status: "allocated",
+    allocations,
+  });
+}
