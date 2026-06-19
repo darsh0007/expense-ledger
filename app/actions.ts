@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { SettlementMethod } from "../src/domain/index.js";
 import {
+  createBudgetPeriod,
   createPerson,
   getMe,
   hardDeleteTransaction,
@@ -129,6 +130,30 @@ export async function destroyTransaction(formData: FormData): Promise<void> {
   if (!id) return;
 
   await hardDeleteTransaction(id);
+
+  revalidatePath("/");
+}
+
+/**
+ * Server Action: create a monthly budget period. Takes a month ("YYYY-MM") and a
+ * dollar limit; derives the first/last calendar day in UTC so the domain's
+ * period filter (which compares UTC date keys) lines up exactly.
+ */
+export async function addBudgetPeriod(formData: FormData): Promise<void> {
+  const month = String(formData.get("month") ?? ""); // e.g. "2026-08"
+  if (!/^\d{4}-\d{2}$/.test(month)) return;
+
+  const [year, mon] = month.split("-").map(Number);
+  const startDate = new Date(Date.UTC(year as number, (mon as number) - 1, 1));
+  const endDate = new Date(Date.UTC(year as number, mon as number, 0)); // last day of month
+  const limitCents = dollarsToCents(String(formData.get("limit") ?? ""));
+
+  await createBudgetPeriod({
+    id: `budget-${month}`,
+    startDate,
+    endDate,
+    limitCents,
+  });
 
   revalidatePath("/");
 }

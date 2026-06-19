@@ -1,5 +1,6 @@
 import {
   listAccounts,
+  listBudgetPeriods,
   listPeople,
   listRecentTransactions,
   listTrashedTransactions,
@@ -7,6 +8,7 @@ import {
 } from "../src/repository/ledger.js";
 import { computePeriodSummary } from "../src/services/reporting.js";
 import {
+  addBudgetPeriod,
   addPerson,
   addPurchase,
   addSettlement,
@@ -15,29 +17,80 @@ import {
   undoRemoveTransaction,
 } from "./actions.js";
 import { ConfirmButton } from "./ConfirmButton.js";
+import type { BudgetPeriod } from "../src/domain/index.js";
 
 // Always render on each request with fresh data from Neon (no static caching).
 export const dynamic = "force-dynamic";
 
-const PERIOD_ID = "budget-2026-07";
-
 /** How long a deleted transaction stays recoverable in the Trash. */
 const TRASH_RETENTION_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 function fmt(cents: number): string {
   const sign = cents < 0 ? "-" : "";
   return `${sign}$${(Math.abs(cents) / 100).toFixed(2)}`;
 }
 
-export default async function DashboardPage() {
+/** Human label for a period, e.g. "July 2026". */
+function periodLabel(p: BudgetPeriod): string {
+  return `${MONTHS[p.startDate.getUTCMonth()]} ${p.startDate.getUTCFullYear()}`;
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
   // Empty the recycle bin of anything older than the retention window first, so
   // the Trash list below never shows an item that's about to vanish.
   await purgeTrashedBefore(new Date(Date.now() - TRASH_RETENTION_DAYS * DAY_MS));
 
+  const { period: requestedPeriod } = await searchParams;
+  const periods = await listBudgetPeriods();
+
+  // Pick the period to show: the one in the URL if valid, else the one covering
+  // today, else the most recent. (Periods come back oldest-first.)
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const covering = periods.find(
+    (p) =>
+      p.startDate.toISOString().slice(0, 10) <= todayKey &&
+      todayKey <= p.endDate.toISOString().slice(0, 10),
+  );
+  const requested = periods.find((p) => p.id === requestedPeriod);
+  const selected = requested ?? covering ?? periods[periods.length - 1];
+
+  // No periods yet: offer to create the first one and stop.
+  if (!selected) {
+    return (
+      <main>
+        <h1>Expense Ledger</h1>
+        <p className="subtitle">No budget period yet — create one to begin.</p>
+        <section className="card">
+          <h2>New budget period</h2>
+          <form action={addBudgetPeriod} className="period-new">
+            <input type="month" name="month" required />
+            <input
+              name="limit"
+              inputMode="decimal"
+              placeholder="limit e.g. 800"
+              autoComplete="off"
+              required
+            />
+            <button type="submit">Add month</button>
+          </form>
+        </section>
+      </main>
+    );
+  }
+
   // Read path: Service -> Repository -> Domain, exactly like the report script.
   const [summary, people, accounts, recent, trashed] = await Promise.all([
-    computePeriodSummary(PERIOD_ID),
+    computePeriodSummary(selected.id),
     listPeople(),
     listAccounts(),
     listRecentTransactions(8),
@@ -54,8 +107,33 @@ export default async function DashboardPage() {
       <h1>Expense Ledger</h1>
       <p className="subtitle">
         {me ? `${me.displayName}'s personal budget` : "Personal budget"} ·{" "}
-        {summary.periodId}
+        {periodLabel(selected)}
       </p>
+
+      <section className="card">
+        <h2>Budget period</h2>
+        <form method="get" className="period-switch">
+          <select name="period" defaultValue={selected.id}>
+            {periods.map((p) => (
+              <option key={p.id} value={p.id}>
+                {periodLabel(p)} — {fmt(p.limitCents)}
+              </option>
+            ))}
+          </select>
+          <button type="submit">View</button>
+        </form>
+        <form action={addBudgetPeriod} className="period-new">
+          <input type="month" name="month" required />
+          <input
+            name="limit"
+            inputMode="decimal"
+            placeholder="limit e.g. 800"
+            autoComplete="off"
+            required
+          />
+          <button type="submit">Add month</button>
+        </form>
+      </section>
 
       <section className="card">
         <h2>Personal spend this period</h2>

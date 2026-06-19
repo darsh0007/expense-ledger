@@ -43,6 +43,24 @@ export async function listBudgetPeriods(): Promise<BudgetPeriod[]> {
   return rows.map(toDomainBudgetPeriod);
 }
 
+/** Create a budget period (one month with a personal-spend limit). */
+export async function createBudgetPeriod(input: {
+  id: string;
+  startDate: Date;
+  endDate: Date;
+  limitCents: number;
+}): Promise<BudgetPeriod> {
+  const row = await prisma.budgetPeriod.create({
+    data: {
+      id: input.id,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      limitCents: input.limitCents,
+    },
+  });
+  return toDomainBudgetPeriod(row);
+}
+
 /** All people, for resolving ids to display names in reports/UI. */
 export async function listPeople(): Promise<Array<Person & { displayName: string }>> {
   const rows = await prisma.person.findMany({ orderBy: { displayName: "asc" } });

@@ -253,6 +253,40 @@ button.restore:hover {
   color: var(--good);
 }
 
+.period-switch,
+.period-new {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.period-new {
+  margin-top: 10px;
+}
+
+.period-switch select,
+.period-new input {
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.period-switch button,
+.period-new button {
+  background: var(--accent);
+  color: #06283d;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 ul.people {
   list-style: none;
   margin: 0;
