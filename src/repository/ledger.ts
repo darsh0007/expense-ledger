@@ -174,6 +174,8 @@ export async function listTrashedTransactions(): Promise<TrashedTransactionItem[
     merchant: r.merchant,
     amountCents: r.amountCents,
     expenseDate: r.expenseDate,
+    type: r.type as TransactionType,
+    status: r.status as TransactionStatus,
     deletedAt: r.deletedAt as Date,
   }));
 }

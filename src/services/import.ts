@@ -65,11 +65,11 @@ function parseDate(raw: string): Date | null {
   const s = raw.trim();
   let m: RegExpExecArray | null;
   if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s))) {
-    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    return new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!));
   }
   if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s))) {
     // Assume MM/DD/YYYY (North American statements).
-    return new Date(Date.UTC(+m[3], +m[1] - 1, +m[2]));
+    return new Date(Date.UTC(+m[3]!, +m[1]! - 1, +m[2]!));
   }
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return null;
@@ -78,7 +78,7 @@ function parseDate(raw: string): Date | null {
 
 function findColumn(header: string[], keywords: string[]): number {
   for (let i = 0; i < header.length; i++) {
-    const h = header[i].toLowerCase();
+    const h = (header[i] ?? "").toLowerCase();
     if (keywords.some((k) => h.includes(k))) return i;
   }
   return -1;
@@ -96,7 +96,7 @@ export function parseStatementCsv(text: string): ParsedStatementRow[] {
     .filter((l) => l.length > 0);
   if (lines.length === 0) return [];
 
-  const first = splitCsvLine(lines[0]);
+  const first = splitCsvLine(lines[0] ?? "");
   const looksLikeHeader =
     findColumn(first, ["date"]) !== -1 && findColumn(first, ["amount", "amt"]) !== -1;
 
@@ -115,7 +115,7 @@ export function parseStatementCsv(text: string): ParsedStatementRow[] {
 
   const rows: ParsedStatementRow[] = [];
   for (let i = start; i < lines.length; i++) {
-    const cols = splitCsvLine(lines[i]);
+    const cols = splitCsvLine(lines[i] ?? "");
     const expenseDate = parseDate(cols[dateCol] ?? "");
     const amountCents = parseAmountCents(cols[amountCol] ?? "");
     if (!expenseDate || amountCents === null) continue;
