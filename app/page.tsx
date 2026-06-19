@@ -25,6 +25,7 @@ import {
   renamePerson,
   reviewAllocateToMe,
   reviewIgnore,
+  reviewSplitEqually,
   undoRemoveTransaction,
 } from "./actions.js";
 import { ConfirmButton } from "./ConfirmButton.js";
@@ -354,6 +355,37 @@ export default async function DashboardPage({
                       Mine
                     </button>
                   </form>
+                  <details className="edit-pop">
+                    <summary
+                      className="edit-toggle"
+                      title="Split with friends"
+                      aria-label="Split with friends"
+                    >
+                      ÷
+                    </summary>
+                    <form action={reviewSplitEqually} className="edit-form">
+                      <input type="hidden" name="transactionId" value={t.id} />
+                      <span className="muted" style={{ fontSize: "0.78rem" }}>
+                        Split equally between:
+                      </span>
+                      <div className="split-people">
+                        {people.map((p) => (
+                          <label key={p.id} className="check">
+                            <input
+                              type="checkbox"
+                              name="participants"
+                              value={p.id}
+                              defaultChecked={p.isMe}
+                            />
+                            {p.displayName}
+                          </label>
+                        ))}
+                      </div>
+                      <button type="submit" className="review-mine">
+                        Split
+                      </button>
+                    </form>
+                  </details>
                   <form action={reviewIgnore} className="inline-delete">
                     <input type="hidden" name="transactionId" value={t.id} />
                     <button

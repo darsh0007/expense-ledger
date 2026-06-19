@@ -378,6 +378,27 @@ button.refund:hover {
   margin: 0;
 }
 
+.edit-form .split-people {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.edit-form .check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.edit-form .check input {
+  width: auto;
+  flex: none;
+}
+
 button.review-mine,
 button.review-ignore {
   border-radius: 8px;

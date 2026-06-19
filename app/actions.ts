@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { SettlementMethod } from "../src/domain/index.js";
 import {
+  allocateTransactionEqually,
   allocateTransactionToMe,
   createBudgetPeriod,
   createFullRefund,
@@ -294,6 +295,27 @@ export async function reviewAllocateToMe(formData: FormData): Promise<void> {
   if (!id) return;
 
   await allocateTransactionToMe(id, me.id);
+
+  revalidatePath("/");
+}
+
+/**
+ * Server Action (review): split an imported transaction equally across the
+ * chosen people. Only my own share counts toward the budget; everyone else's
+ * share becomes a debt they owe me.
+ */
+export async function reviewSplitEqually(formData: FormData): Promise<void> {
+  const me = await getMe();
+  const id = String(formData.get("transactionId") ?? "");
+  if (!id) return;
+
+  const participants = formData
+    .getAll("participants")
+    .map(String)
+    .filter((p) => p.length > 0);
+  if (participants.length === 0) return;
+
+  await allocateTransactionEqually(id, me.id, participants);
 
   revalidatePath("/");
 }

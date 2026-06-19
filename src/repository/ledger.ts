@@ -15,6 +15,7 @@ import type {
   TransactionType,
 } from "../domain/index.js";
 import { prisma } from "../lib/db.js";
+import { distributeEqualSplit } from "../domain/index.js";
 import {
   toDomainAllocation,
   toDomainBudgetPeriod,
@@ -541,6 +542,42 @@ export async function allocateTransactionToMe(id: string, meId: string): Promise
           budgetImpact: true,
           expenseDate: tx.expenseDate,
         },
+      },
+    },
+  });
+}
+
+/**
+ * Review decision "split equally": divide the imported transaction across the
+ * chosen people (the payer absorbs the remainder cent), with only MY share
+ * hitting the budget, and mark it allocated. Clears any prior allocations first
+ * so it's idempotent. Σ shares === amount by construction, so conservation holds.
+ */
+export async function allocateTransactionEqually(
+  id: string,
+  meId: string,
+  participantIds: string[],
+): Promise<void> {
+  if (participantIds.length === 0) {
+    throw new Error("Pick at least one person to split this with.");
+  }
+  const tx = await prisma.transaction.findUnique({ where: { id } });
+  if (!tx) throw new Error(`Transaction not found: ${id}`);
+
+  const shares = distributeEqualSplit(tx.amountCents, participantIds, tx.payerPersonId);
+
+  await prisma.allocation.deleteMany({ where: { transactionId: id } });
+  await prisma.transaction.update({
+    where: { id },
+    data: {
+      status: "allocated",
+      allocations: {
+        create: participantIds.map((pid) => ({
+          personId: pid,
+          amountCents: shares.get(pid) ?? 0,
+          budgetImpact: pid === meId,
+          expenseDate: tx.expenseDate,
+        })),
       },
     },
   });
