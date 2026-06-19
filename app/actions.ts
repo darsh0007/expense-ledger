@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { SettlementMethod } from "../src/domain/index.js";
 import { createPerson, getMe } from "../src/repository/ledger.js";
 import {
   dollarsToCents,
   recordEqualSplitPurchase,
 } from "../src/services/transactions.js";
+import { recordSettlement } from "../src/services/settlements.js";
 
 /**
  * Server Action: runs ONLY on the server. The browser never sees this code — it
@@ -51,6 +53,40 @@ export async function addPurchase(formData: FormData): Promise<void> {
     paymentAccountId: accountId || null,
     merchant,
     expenseDate,
+  });
+
+  revalidatePath("/");
+}
+
+/**
+ * Server Action: record a repayment that clears (part of) a balance. Parsing
+ * and direction-mapping happen here at the boundary; the service decides if the
+ * repayment is valid and the repository persists it.
+ */
+export async function addSettlement(formData: FormData): Promise<void> {
+  const me = await getMe();
+
+  const personId = String(formData.get("personId") ?? "");
+  if (!personId) return;
+
+  const direction =
+    String(formData.get("direction") ?? "they_paid_me") === "i_paid_them"
+      ? "i_paid_them"
+      : "they_paid_me";
+  const amountCents = dollarsToCents(String(formData.get("amount") ?? ""));
+  const method = String(formData.get("method") ?? "e_transfer") as SettlementMethod;
+  const note = String(formData.get("note") ?? "").trim() || undefined;
+  const dateStr = String(formData.get("settlementDate") ?? "");
+  const settlementDate = dateStr ? new Date(`${dateStr}T00:00:00Z`) : new Date();
+
+  await recordSettlement({
+    meId: me.id,
+    personId,
+    direction,
+    amountCents,
+    method,
+    settlementDate,
+    note,
   });
 
   revalidatePath("/");

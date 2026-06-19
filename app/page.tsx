@@ -4,7 +4,7 @@ import {
   listRecentTransactions,
 } from "../src/repository/ledger.js";
 import { computePeriodSummary } from "../src/services/reporting.js";
-import { addPerson, addPurchase } from "./actions.js";
+import { addPerson, addPurchase, addSettlement } from "./actions.js";
 
 // Always render on each request with fresh data from Neon (no static caching).
 export const dynamic = "force-dynamic";
@@ -172,6 +172,93 @@ export default async function DashboardPage() {
             </div>
           ))
         )}
+      </section>
+
+      <section className="card">
+        <h2>Settle up</h2>
+        {people.filter((p) => !p.isMe).length === 0 ? (
+          <p className="muted" style={{ margin: 0 }}>
+            Add a person first to record a repayment.
+          </p>
+        ) : (
+          <form className="purchase" action={addSettlement}>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor="settle-person">Person</label>
+                <select id="settle-person" name="personId" defaultValue="">
+                  <option value="" disabled>
+                    — who —
+                  </option>
+                  {people
+                    .filter((p) => !p.isMe)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.displayName}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="settle-direction">Direction</label>
+                <select
+                  id="settle-direction"
+                  name="direction"
+                  defaultValue="they_paid_me"
+                >
+                  <option value="they_paid_me">They paid me</option>
+                  <option value="i_paid_them">I paid them</option>
+                </select>
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor="settle-amount">Amount</label>
+                <input
+                  id="settle-amount"
+                  name="amount"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="settle-method">Method</label>
+                <select id="settle-method" name="method" defaultValue="e_transfer">
+                  <option value="e_transfer">E-transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="offset">Offset</option>
+                  <option value="splitwise">Splitwise</option>
+                </select>
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="settle-date">Date</label>
+              <input
+                id="settle-date"
+                name="settlementDate"
+                type="date"
+                defaultValue={today}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="settle-note">Note (required if it overpays)</label>
+              <input
+                id="settle-note"
+                name="note"
+                placeholder="optional"
+                maxLength={200}
+                autoComplete="off"
+              />
+            </div>
+            <button type="submit">Record settlement</button>
+          </form>
+        )}
+        <p className="muted hint">
+          A settlement clears a balance &mdash; it never counts toward your
+          budget. Repaying more than what&apos;s owed needs a note.
+        </p>
       </section>
 
       <section className="card">

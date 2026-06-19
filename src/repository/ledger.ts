@@ -9,6 +9,7 @@ import type {
   BudgetPeriod,
   Person,
   Settlement,
+  SettlementMethod,
   Transaction,
   TransactionStatus,
   TransactionType,
@@ -154,6 +155,35 @@ export async function createTransactionWithAllocations(
     },
   });
   return toDomainTransaction(row);
+}
+
+/** A debt-clearing event to persist (amount is always positive; direction = from -> to). */
+export interface NewSettlement {
+  fromPersonId: string;
+  toPersonId: string;
+  amountCents: number;
+  method: SettlementMethod;
+  settlementDate: Date;
+  note?: string | null;
+}
+
+/**
+ * Persist a settlement (a repayment). Unlike a purchase, a settlement is a
+ * single row with no allocations — it doesn't consume budget, it just moves the
+ * pair's balance back toward zero. `computeBalances` folds it in automatically.
+ */
+export async function createSettlement(input: NewSettlement): Promise<Settlement> {
+  const row = await prisma.settlement.create({
+    data: {
+      fromPersonId: input.fromPersonId,
+      toPersonId: input.toPersonId,
+      amountCents: input.amountCents,
+      method: input.method,
+      settlementDate: input.settlementDate,
+      note: input.note ?? null,
+    },
+  });
+  return toDomainSettlement(row);
 }
 
 /** The three event streams the projections run over. */
