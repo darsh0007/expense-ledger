@@ -91,6 +91,7 @@ export interface TransactionListItem {
 /** The most recent transactions, newest first, for the dashboard feed. */
 export async function listRecentTransactions(limit = 10): Promise<TransactionListItem[]> {
   const rows = await prisma.transaction.findMany({
+    where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: limit,
   });
@@ -99,6 +100,26 @@ export async function listRecentTransactions(limit = 10): Promise<TransactionLis
     merchant: r.merchant,
     amountCents: r.amountCents,
     expenseDate: r.expenseDate,
+  }));
+}
+
+/** A trashed transaction plus when it was deleted (drives the auto-purge countdown). */
+export interface TrashedTransactionItem extends TransactionListItem {
+  deletedAt: Date;
+}
+
+/** Soft-deleted transactions, most-recently-trashed first, for the Trash view. */
+export async function listTrashedTransactions(): Promise<TrashedTransactionItem[]> {
+  const rows = await prisma.transaction.findMany({
+    where: { deletedAt: { not: null } },
+    orderBy: { deletedAt: "desc" },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    merchant: r.merchant,
+    amountCents: r.amountCents,
+    expenseDate: r.expenseDate,
+    deletedAt: r.deletedAt as Date,
   }));
 }
 
@@ -158,13 +179,43 @@ export async function createTransactionWithAllocations(
 }
 
 /**
- * Delete a transaction and (via the schema's `onDelete: Cascade` on Allocation)
- * all of its allocations in one go. Removing the slices is what makes the
- * budget and balances back out the deleted purchase automatically — the pure
- * projections simply stop seeing those rows.
+ * Soft-delete a transaction: stamp `deletedAt` so every projection stops
+ * counting it (loadLedger excludes deleted rows AND their allocations), but the
+ * data survives in the Trash and can be restored. No cascade, nothing lost.
  */
-export async function deleteTransaction(id: string): Promise<void> {
+export async function softDeleteTransaction(id: string): Promise<void> {
+  await prisma.transaction.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+}
+
+/** Bring a transaction back from the Trash (clears `deletedAt`). */
+export async function restoreTransaction(id: string): Promise<void> {
+  await prisma.transaction.update({
+    where: { id },
+    data: { deletedAt: null },
+  });
+}
+
+/**
+ * Permanently delete a transaction (and, via `onDelete: Cascade`, its
+ * allocations). Used by "Delete forever" in the Trash and by the auto-purge.
+ */
+export async function hardDeleteTransaction(id: string): Promise<void> {
   await prisma.transaction.delete({ where: { id } });
+}
+
+/**
+ * Auto-purge: permanently remove transactions trashed before `cutoff`. This is
+ * the "recycle bin empties itself after a few days" rule. Returns how many were
+ * purged. Cascades allocations.
+ */
+export async function purgeTrashedBefore(cutoff: Date): Promise<number> {
+  const { count } = await prisma.transaction.deleteMany({
+    where: { deletedAt: { not: null, lt: cutoff } },
+  });
+  return count;
 }
 
 /** A debt-clearing event to persist (amount is always positive; direction = from -> to). */
@@ -211,8 +262,11 @@ export interface LedgerData {
  */
 export async function loadLedger(): Promise<LedgerData> {
   const [transactions, allocations, settlements] = await Promise.all([
-    prisma.transaction.findMany(),
-    prisma.allocation.findMany(),
+    prisma.transaction.findMany({ where: { deletedAt: null } }),
+    // Only allocations whose parent transaction is still live. This is what
+    // makes a soft-deleted purchase drop out of the BUDGET too (computeBudget
+    // scans allocations, not transactions).
+    prisma.allocation.findMany({ where: { transaction: { deletedAt: null } } }),
     prisma.settlement.findMany(),
   ]);
 

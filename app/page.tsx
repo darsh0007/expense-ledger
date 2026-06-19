@@ -2,14 +2,28 @@ import {
   listAccounts,
   listPeople,
   listRecentTransactions,
+  listTrashedTransactions,
+  purgeTrashedBefore,
 } from "../src/repository/ledger.js";
 import { computePeriodSummary } from "../src/services/reporting.js";
-import { addPerson, addPurchase, addSettlement, removeTransaction } from "./actions.js";
+import {
+  addPerson,
+  addPurchase,
+  addSettlement,
+  destroyTransaction,
+  removeTransaction,
+  undoRemoveTransaction,
+} from "./actions.js";
+import { ConfirmButton } from "./ConfirmButton.js";
 
 // Always render on each request with fresh data from Neon (no static caching).
 export const dynamic = "force-dynamic";
 
 const PERIOD_ID = "budget-2026-07";
+
+/** How long a deleted transaction stays recoverable in the Trash. */
+const TRASH_RETENTION_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function fmt(cents: number): string {
   const sign = cents < 0 ? "-" : "";
@@ -17,12 +31,17 @@ function fmt(cents: number): string {
 }
 
 export default async function DashboardPage() {
+  // Empty the recycle bin of anything older than the retention window first, so
+  // the Trash list below never shows an item that's about to vanish.
+  await purgeTrashedBefore(new Date(Date.now() - TRASH_RETENTION_DAYS * DAY_MS));
+
   // Read path: Service -> Repository -> Domain, exactly like the report script.
-  const [summary, people, accounts, recent] = await Promise.all([
+  const [summary, people, accounts, recent, trashed] = await Promise.all([
     computePeriodSummary(PERIOD_ID),
     listPeople(),
     listAccounts(),
     listRecentTransactions(8),
+    listTrashedTransactions(),
   ]);
 
   const nameById = new Map(people.map((p) => [p.id, p.displayName]));
@@ -151,14 +170,14 @@ export default async function DashboardPage() {
                   <span className="value">{fmt(t.amountCents)}</span>
                   <form action={removeTransaction} className="inline-delete">
                     <input type="hidden" name="transactionId" value={t.id} />
-                    <button
-                      type="submit"
+                    <ConfirmButton
                       className="delete"
-                      aria-label="Delete transaction"
+                      message="Move this transaction to Trash?"
+                      ariaLabel="Delete transaction"
                       title="Delete"
                     >
                       ✕
-                    </button>
+                    </ConfirmButton>
                   </form>
                 </span>
               </li>
@@ -166,6 +185,60 @@ export default async function DashboardPage() {
           </ul>
         )}
       </section>
+
+      {trashed.length > 0 && (
+        <section className="card">
+          <h2>Trash ({trashed.length})</h2>
+          <p className="muted hint" style={{ marginTop: 0, marginBottom: 12 }}>
+            Deleted items are kept for {TRASH_RETENTION_DAYS} days, then removed
+            automatically.
+          </p>
+          <ul className="people">
+            {trashed.map((t) => {
+              const daysLeft = Math.max(
+                0,
+                TRASH_RETENTION_DAYS -
+                  Math.floor((Date.now() - t.deletedAt.getTime()) / DAY_MS),
+              );
+              return (
+                <li
+                  key={t.id}
+                  className="row activity"
+                  style={{ padding: "8px 0" }}
+                >
+                  <span className="label">
+                    {t.merchant ?? "(no merchant)"}
+                    <span className="muted">
+                      {" "}· {t.expenseDate.toISOString().slice(0, 10)} ·{" "}
+                      {daysLeft}d left
+                    </span>
+                  </span>
+                  <span className="activity-right">
+                    <span className="value">{fmt(t.amountCents)}</span>
+                    <form action={undoRemoveTransaction} className="inline-delete">
+                      <input type="hidden" name="transactionId" value={t.id} />
+                      <button type="submit" className="restore" title="Restore">
+                        ↩
+                      </button>
+                    </form>
+                    <form action={destroyTransaction} className="inline-delete">
+                      <input type="hidden" name="transactionId" value={t.id} />
+                      <ConfirmButton
+                        className="delete"
+                        message="Permanently delete this transaction? This cannot be undone."
+                        ariaLabel="Delete forever"
+                        title="Delete forever"
+                      >
+                        ✕
+                      </ConfirmButton>
+                    </form>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>Balances (positive = they owe me)</h2>

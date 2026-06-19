@@ -176,12 +176,15 @@ model Transaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  deletedAt DateTime? // soft delete: non-null = in Trash, purged after a few days
+
   allocations Allocation[]
 
   @@unique([paymentAccountId, externalId]) // re-importing the same row is a no-op
   @@index([expenseDate])
   @@index([status])
   @@index([payerPersonId])
+  @@index([deletedAt])
 }
 
 /// Ownership of a slice of consumption. The bridge between a payment event

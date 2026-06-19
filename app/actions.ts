@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import type { SettlementMethod } from "../src/domain/index.js";
-import { createPerson, deleteTransaction, getMe } from "../src/repository/ledger.js";
+import {
+  createPerson,
+  getMe,
+  hardDeleteTransaction,
+  restoreTransaction,
+  softDeleteTransaction,
+} from "../src/repository/ledger.js";
 import {
   dollarsToCents,
   recordEqualSplitPurchase,
@@ -93,14 +99,36 @@ export async function addSettlement(formData: FormData): Promise<void> {
 }
 
 /**
- * Server Action: delete a transaction. The schema cascades its allocations, so
- * the budget and balances back the purchase out automatically on re-render.
+ * Server Action: move a transaction to the Trash (soft delete). The row and its
+ * allocations stay in the database but drop out of every projection, so the
+ * budget and balances back the purchase out immediately. It can be restored
+ * until the auto-purge removes it for good.
  */
 export async function removeTransaction(formData: FormData): Promise<void> {
   const id = String(formData.get("transactionId") ?? "");
   if (!id) return;
 
-  await deleteTransaction(id);
+  await softDeleteTransaction(id);
+
+  revalidatePath("/");
+}
+
+/** Server Action: restore a transaction from the Trash. */
+export async function undoRemoveTransaction(formData: FormData): Promise<void> {
+  const id = String(formData.get("transactionId") ?? "");
+  if (!id) return;
+
+  await restoreTransaction(id);
+
+  revalidatePath("/");
+}
+
+/** Server Action: permanently delete a trashed transaction ("Delete forever"). */
+export async function destroyTransaction(formData: FormData): Promise<void> {
+  const id = String(formData.get("transactionId") ?? "");
+  if (!id) return;
+
+  await hardDeleteTransaction(id);
 
   revalidatePath("/");
 }
