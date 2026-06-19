@@ -9,6 +9,7 @@ import {
   createImportedTransactions,
   createPerson,
   deletePerson,
+  deleteSettlement,
   getMe,
   hardDeleteTransaction,
   ignoreTransaction,
@@ -150,6 +151,20 @@ export async function addSettlement(formData: FormData): Promise<void> {
     settlementDate,
     note,
   });
+
+  revalidatePath("/");
+}
+
+/**
+ * Server Action: delete a settlement. Removing the row makes balances fold the
+ * repayment back out, restoring the prior balance — the way to undo a mistaken
+ * settlement.
+ */
+export async function removeSettlement(formData: FormData): Promise<void> {
+  const id = String(formData.get("settlementId") ?? "");
+  if (!id) return;
+
+  await deleteSettlement(id);
 
   revalidatePath("/");
 }

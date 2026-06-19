@@ -2,6 +2,7 @@ import {
   listAccounts,
   listBudgetPeriods,
   listPeople,
+  listRecentSettlements,
   listRecentTransactions,
   listReviewQueue,
   listTrashedTransactions,
@@ -19,6 +20,7 @@ import {
   importStatement,
   refundTransaction,
   removePerson,
+  removeSettlement,
   removeTransaction,
   renamePerson,
   reviewAllocateToMe,
@@ -98,13 +100,14 @@ export default async function DashboardPage({
   }
 
   // Read path: Service -> Repository -> Domain, exactly like the report script.
-  const [summary, people, accounts, recent, trashed, reviewQueue] = await Promise.all([
+  const [summary, people, accounts, recent, trashed, reviewQueue, settlements] = await Promise.all([
     computePeriodSummary(selected.id),
     listPeople(),
     listAccounts(),
     listRecentTransactions(8),
     listTrashedTransactions(),
     listReviewQueue(),
+    listRecentSettlements(8),
   ]);
 
   const nameById = new Map(people.map((p) => [p.id, p.displayName]));
@@ -623,6 +626,51 @@ export default async function DashboardPage({
           budget. Repaying more than what&apos;s owed needs a note.
         </p>
       </section>
+
+      {settlements.length > 0 && (
+        <section className="card">
+          <h2>Settlement history</h2>
+          <ul className="people">
+            {settlements.map((s) => {
+              const fromMe = me ? s.fromPersonId === me.id : false;
+              const arrow = fromMe
+                ? `You → ${s.toName}`
+                : `${s.fromName} → You`;
+              return (
+                <li
+                  key={s.id}
+                  className="row activity"
+                  style={{ padding: "8px 0" }}
+                >
+                  <span className="label">
+                    {arrow}
+                    <span className="muted">
+                      {" "}
+                      · {s.settlementDate.toISOString().slice(0, 10)} ·{" "}
+                      {s.method.replace("_", "-")}
+                      {s.note ? ` · ${s.note}` : ""}
+                    </span>
+                  </span>
+                  <span className="activity-right">
+                    <span className="value">{fmt(s.amountCents)}</span>
+                    <form action={removeSettlement} className="inline-delete">
+                      <input type="hidden" name="settlementId" value={s.id} />
+                      <ConfirmButton
+                        className="delete"
+                        message="Delete this settlement? The balance will revert."
+                        ariaLabel="Delete settlement"
+                        title="Delete"
+                      >
+                        ✕
+                      </ConfirmButton>
+                    </form>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>People ({people.length})</h2>

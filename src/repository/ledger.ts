@@ -420,6 +420,49 @@ export async function createSettlement(input: NewSettlement): Promise<Settlement
   return toDomainSettlement(row);
 }
 
+/** A settlement plus both parties' names, for the history list. */
+export interface SettlementListItem {
+  id: string;
+  fromPersonId: string;
+  toPersonId: string;
+  fromName: string;
+  toName: string;
+  amountCents: number;
+  method: SettlementMethod;
+  settlementDate: Date;
+  note: string | null;
+}
+
+/** Recent settlements, newest first, with the two parties' display names. */
+export async function listRecentSettlements(limit = 10): Promise<SettlementListItem[]> {
+  const rows = await prisma.settlement.findMany({
+    orderBy: { settlementDate: "desc" },
+    take: limit,
+    include: { fromPerson: true, toPerson: true },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    fromPersonId: r.fromPersonId,
+    toPersonId: r.toPersonId,
+    fromName: r.fromPerson.displayName,
+    toName: r.toPerson.displayName,
+    amountCents: r.amountCents,
+    method: r.method as SettlementMethod,
+    settlementDate: r.settlementDate,
+    note: r.note,
+  }));
+}
+
+/**
+ * Permanently delete a settlement. There's nothing to soft-delete here: a
+ * settlement has no allocations, and removing the row makes `computeBalances`
+ * fold the repayment back out, restoring the prior balance. Used to undo a
+ * mistaken repayment ("delete and re-add" replaces in-place editing).
+ */
+export async function deleteSettlement(id: string): Promise<void> {
+  await prisma.settlement.delete({ where: { id } });
+}
+
 /** A row parsed from a statement, ready to import as a needs_review transaction. */
 export interface ImportedRow {
   expenseDate: Date;
