@@ -118,9 +118,23 @@
               "icon": "lucide-file",
               "title": "Project setup"
             }
+          },
+          {
+            "id": "7a5a7bd8fe58fa93",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Architecture Layers.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Architecture Layers"
+            }
           }
         ],
-        "currentTab": 7
+        "currentTab": 8
       }
     ],
     "direction": "vertical"
@@ -282,14 +296,15 @@
       "bases:Create new base": false
     }
   },
-  "active": "6befcce28c331200",
+  "active": "7a5a7bd8fe58fa93",
   "lastOpenFiles": [
+    "Project setup.md",
+    "Architecture Layers.md",
     "images/Pasted image 20260618144748.png",
     "Project concepts.md",
     "Personal Expense Ledger Roadmap.md",
     "General notes.md",
     "Prisma Notes.md",
-    "Project setup.md",
     "images/Pasted image 20260618142742.png",
     "Database setup.md",
     "images/Pasted image 20260618142031.png",

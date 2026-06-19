@@ -40,6 +40,28 @@ export async function listPeople(): Promise<Array<Person & { displayName: string
   return rows.map((r) => ({ ...toDomainPerson(r), displayName: r.displayName }));
 }
 
+/**
+ * Add a new person to the ledger. The schema lets us do this any time — a person
+ * is just a name we can attribute spending or debts to (a friend, a roommate,
+ * a one-off). `isMe` is always false here; there is exactly one "me" (the seed).
+ */
+export async function createPerson(input: {
+  displayName: string;
+  email?: string;
+}): Promise<Person & { displayName: string }> {
+  const displayName = input.displayName.trim();
+  if (!displayName) throw new Error("displayName is required");
+
+  const row = await prisma.person.create({
+    data: {
+      displayName,
+      isMe: false,
+      email: input.email?.trim() ? input.email.trim() : null,
+    },
+  });
+  return { ...toDomainPerson(row), displayName: row.displayName };
+}
+
 /** The three event streams the projections run over. */
 export interface LedgerData {
   transactions: Transaction[];
