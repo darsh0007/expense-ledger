@@ -89,6 +89,39 @@ export async function createPerson(input: {
   return { ...toDomainPerson(row), displayName: row.displayName };
 }
 
+/** Rename a person (the only mutable field that matters for the UI). */
+export async function updatePersonName(id: string, displayName: string): Promise<void> {
+  const name = displayName.trim();
+  if (!name) throw new Error("displayName is required");
+  await prisma.person.update({ where: { id }, data: { displayName: name } });
+}
+
+/**
+ * Remove a person — but only if they have NO activity (no allocations, no
+ * transactions they paid, no settlements). Foreign keys would block it anyway;
+ * we check first to give a clear message instead of a database error. The
+ * budget owner (isMe) can never be removed.
+ */
+export async function deletePerson(id: string): Promise<void> {
+  const person = await prisma.person.findUnique({ where: { id } });
+  if (!person) return;
+  if (person.isMe) throw new Error("The budget owner can't be removed.");
+
+  const [allocations, asPayer, settlementsFrom, settlementsTo] = await Promise.all([
+    prisma.allocation.count({ where: { personId: id } }),
+    prisma.transaction.count({ where: { payerPersonId: id } }),
+    prisma.settlement.count({ where: { fromPersonId: id } }),
+    prisma.settlement.count({ where: { toPersonId: id } }),
+  ]);
+  if (allocations + asPayer + settlementsFrom + settlementsTo > 0) {
+    throw new Error(
+      "Can't remove someone with activity. Delete their transactions/settlements first.",
+    );
+  }
+
+  await prisma.person.delete({ where: { id } });
+}
+
 /** Active accounts (cards, cash, …) for the "paid with" dropdown. */
 export async function listAccounts(): Promise<Array<{ id: string; name: string; type: string }>> {
   const rows = await prisma.account.findMany({

@@ -8,11 +8,13 @@ import {
   createFullRefund,
   createImportedTransactions,
   createPerson,
+  deletePerson,
   getMe,
   hardDeleteTransaction,
   ignoreTransaction,
   restoreTransaction,
   softDeleteTransaction,
+  updatePersonName,
 } from "../src/repository/ledger.js";
 import {
   dollarsToCents,
@@ -35,6 +37,27 @@ export async function addPerson(formData: FormData): Promise<void> {
   await createPerson({ displayName });
 
   // Tell Next the dashboard data changed so it re-renders with the new person.
+  revalidatePath("/");
+}
+
+/** Server Action: rename a person. */
+export async function renamePerson(formData: FormData): Promise<void> {
+  const id = String(formData.get("personId") ?? "");
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  if (!id || !displayName) return;
+
+  await updatePersonName(id, displayName);
+
+  revalidatePath("/");
+}
+
+/** Server Action: remove a person (only if they have no activity). */
+export async function removePerson(formData: FormData): Promise<void> {
+  const id = String(formData.get("personId") ?? "");
+  if (!id) return;
+
+  await deletePerson(id);
+
   revalidatePath("/");
 }
 

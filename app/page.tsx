@@ -17,7 +17,9 @@ import {
   destroyTransaction,
   importStatement,
   refundTransaction,
+  removePerson,
   removeTransaction,
+  renamePerson,
   reviewAllocateToMe,
   reviewIgnore,
   undoRemoveTransaction,
@@ -589,9 +591,34 @@ export default async function DashboardPage({
         </form>
         <ul className="people">
           {people.map((p) => (
-            <li key={p.id}>
-              {p.displayName}
-              {p.isMe && <span className="badge">me</span>}
+            <li key={p.id} className="person-row">
+              <form action={renamePerson} className="rename">
+                <input type="hidden" name="personId" value={p.id} />
+                <input
+                  name="displayName"
+                  defaultValue={p.displayName}
+                  aria-label="Name"
+                  maxLength={80}
+                />
+                <button type="submit" className="review-mine">
+                  Save
+                </button>
+              </form>
+              {p.isMe ? (
+                <span className="badge">me</span>
+              ) : (
+                <form action={removePerson} className="inline-delete">
+                  <input type="hidden" name="personId" value={p.id} />
+                  <ConfirmButton
+                    className="delete"
+                    message={`Remove ${p.displayName}? Only allowed if they have no activity.`}
+                    ariaLabel="Remove person"
+                    title="Remove"
+                  >
+                    ✕
+                  </ConfirmButton>
+                </form>
+              )}
             </li>
           ))}
         </ul>
