@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { SettlementMethod } from "../src/domain/index.js";
 import {
   createBudgetPeriod,
+  createFullRefund,
   createPerson,
   getMe,
   hardDeleteTransaction,
@@ -156,6 +157,20 @@ export async function destroyTransaction(formData: FormData): Promise<void> {
   if (!id) return;
 
   await hardDeleteTransaction(id);
+
+  revalidatePath("/");
+}
+
+/**
+ * Server Action: fully refund a purchase. Creates a mirror-image `refund`
+ * transaction that cancels the original's budget + balance impact while keeping
+ * both records for history.
+ */
+export async function refundTransaction(formData: FormData): Promise<void> {
+  const id = String(formData.get("transactionId") ?? "");
+  if (!id) return;
+
+  await createFullRefund(id);
 
   revalidatePath("/");
 }

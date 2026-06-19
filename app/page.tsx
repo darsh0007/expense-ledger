@@ -14,6 +14,7 @@ import {
   addCustomPurchase,
   addSettlement,
   destroyTransaction,
+  refundTransaction,
   removeTransaction,
   undoRemoveTransaction,
 } from "./actions.js";
@@ -309,6 +310,19 @@ export default async function DashboardPage({
                 </span>
                 <span className="activity-right">
                   <span className="value">{fmt(t.amountCents)}</span>
+                  {t.type === "purchase" && t.status !== "refunded" && (
+                    <form action={refundTransaction} className="inline-delete">
+                      <input type="hidden" name="transactionId" value={t.id} />
+                      <ConfirmButton
+                        className="refund"
+                        message="Record a full refund of this purchase?"
+                        ariaLabel="Refund transaction"
+                        title="Refund"
+                      >
+                        ↺
+                      </ConfirmButton>
+                    </form>
+                  )}
                   <form action={removeTransaction} className="inline-delete">
                     <input type="hidden" name="transactionId" value={t.id} />
                     <ConfirmButton

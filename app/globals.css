@@ -276,6 +276,24 @@ button.restore:hover {
   color: var(--good);
 }
 
+button.refund {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+button.refund:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .period-switch,
 .period-new {
   display: flex;

@@ -104,6 +104,8 @@ export interface TransactionListItem {
   merchant: string | null;
   amountCents: number;
   expenseDate: Date;
+  type: TransactionType;
+  status: TransactionStatus;
 }
 
 /** The most recent transactions, newest first, for the dashboard feed. */
@@ -118,6 +120,8 @@ export async function listRecentTransactions(limit = 10): Promise<TransactionLis
     merchant: r.merchant,
     amountCents: r.amountCents,
     expenseDate: r.expenseDate,
+    type: r.type,
+    status: r.status,
   }));
 }
 
@@ -194,6 +198,54 @@ export async function createTransactionWithAllocations(
     },
   });
   return toDomainTransaction(row);
+}
+
+/**
+ * Create a FULL refund of a purchase: a new `refund` transaction whose amount
+ * and allocations are the exact negatives of the original. Because the budget
+ * and balances are sums over allocations, the negatives cancel the original
+ * (in the SAME period, since we copy each allocation's expenseDate), while both
+ * records are kept for history. The original is marked `refunded`.
+ */
+export async function createFullRefund(originalId: string): Promise<Transaction> {
+  const original = await prisma.transaction.findUnique({
+    where: { id: originalId },
+    include: { allocations: true },
+  });
+  if (!original) throw new Error(`Transaction not found: ${originalId}`);
+  if (original.deletedAt) throw new Error("Cannot refund a trashed transaction.");
+  if (original.type !== "purchase") throw new Error("Only purchases can be refunded.");
+  if (original.status === "refunded") throw new Error("This transaction was already refunded.");
+
+  const refund = await prisma.transaction.create({
+    data: {
+      payerPersonId: original.payerPersonId,
+      paymentAccountId: original.paymentAccountId,
+      amountCents: -original.amountCents,
+      merchant: original.merchant ? `Refund — ${original.merchant}` : "Refund",
+      expenseDate: original.expenseDate,
+      type: "refund",
+      status: "allocated",
+      source: "manual",
+      refundOfId: original.id,
+      allocations: {
+        create: original.allocations.map((a) => ({
+          personId: a.personId,
+          amountCents: -a.amountCents,
+          budgetImpact: a.budgetImpact,
+          categoryId: a.categoryId,
+          expenseDate: a.expenseDate,
+        })),
+      },
+    },
+  });
+
+  await prisma.transaction.update({
+    where: { id: original.id },
+    data: { status: "refunded" },
+  });
+
+  return toDomainTransaction(refund);
 }
 
 /**
