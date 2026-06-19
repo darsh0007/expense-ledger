@@ -4,7 +4,7 @@ import {
   listRecentTransactions,
 } from "../src/repository/ledger.js";
 import { computePeriodSummary } from "../src/services/reporting.js";
-import { addPerson, addPurchase, addSettlement } from "./actions.js";
+import { addPerson, addPurchase, addSettlement, removeTransaction } from "./actions.js";
 
 // Always render on each request with fresh data from Neon (no static caching).
 export const dynamic = "force-dynamic";
@@ -140,14 +140,27 @@ export default async function DashboardPage() {
         ) : (
           <ul className="people">
             {recent.map((t) => (
-              <li key={t.id} className="row" style={{ padding: "8px 0" }}>
+              <li key={t.id} className="row activity" style={{ padding: "8px 0" }}>
                 <span className="label">
                   {t.merchant ?? "(no merchant)"}
                   <span className="muted">
                     {" "}· {t.expenseDate.toISOString().slice(0, 10)}
                   </span>
                 </span>
-                <span className="value">{fmt(t.amountCents)}</span>
+                <span className="activity-right">
+                  <span className="value">{fmt(t.amountCents)}</span>
+                  <form action={removeTransaction} className="inline-delete">
+                    <input type="hidden" name="transactionId" value={t.id} />
+                    <button
+                      type="submit"
+                      className="delete"
+                      aria-label="Delete transaction"
+                      title="Delete"
+                    >
+                      ✕
+                    </button>
+                  </form>
+                </span>
               </li>
             ))}
           </ul>

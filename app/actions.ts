@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { SettlementMethod } from "../src/domain/index.js";
-import { createPerson, getMe } from "../src/repository/ledger.js";
+import { createPerson, deleteTransaction, getMe } from "../src/repository/ledger.js";
 import {
   dollarsToCents,
   recordEqualSplitPurchase,
@@ -88,6 +88,19 @@ export async function addSettlement(formData: FormData): Promise<void> {
     settlementDate,
     note,
   });
+
+  revalidatePath("/");
+}
+
+/**
+ * Server Action: delete a transaction. The schema cascades its allocations, so
+ * the budget and balances back the purchase out automatically on re-render.
+ */
+export async function removeTransaction(formData: FormData): Promise<void> {
+  const id = String(formData.get("transactionId") ?? "");
+  if (!id) return;
+
+  await deleteTransaction(id);
 
   revalidatePath("/");
 }

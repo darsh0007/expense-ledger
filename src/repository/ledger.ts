@@ -157,6 +157,16 @@ export async function createTransactionWithAllocations(
   return toDomainTransaction(row);
 }
 
+/**
+ * Delete a transaction and (via the schema's `onDelete: Cascade` on Allocation)
+ * all of its allocations in one go. Removing the slices is what makes the
+ * budget and balances back out the deleted purchase automatically — the pure
+ * projections simply stop seeing those rows.
+ */
+export async function deleteTransaction(id: string): Promise<void> {
+  await prisma.transaction.delete({ where: { id } });
+}
+
 /** A debt-clearing event to persist (amount is always positive; direction = from -> to). */
 export interface NewSettlement {
   fromPersonId: string;
