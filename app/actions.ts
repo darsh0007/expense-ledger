@@ -6,6 +6,7 @@ import {
   allocateTransactionEqually,
   allocateTransactionToMe,
   createBudgetPeriod,
+  createCategory,
   createFullRefund,
   createImportedTransactions,
   createPerson,
@@ -40,6 +41,16 @@ export async function addPerson(formData: FormData): Promise<void> {
   await createPerson({ displayName });
 
   // Tell Next the dashboard data changed so it re-renders with the new person.
+  revalidatePath("/");
+}
+
+/** Server Action: add a spending category. */
+export async function addCategory(formData: FormData): Promise<void> {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  await createCategory(name);
+
   revalidatePath("/");
 }
 
@@ -83,6 +94,18 @@ export async function addPurchase(formData: FormData): Promise<void> {
   // Checked participants; default to "just me" if none were selected.
   const participantIds = formData.getAll("participants").map(String);
   const ids = participantIds.length > 0 ? participantIds : [me.id];
+  const categoryId = String(formData.get("categoryId") ?? "") || null;
+
+  await recordEqualSplitPurchase({
+    payerId: me.id,
+    meId: me.id,
+    amountCents,
+    participantIds: ids,
+    paymentAccountId: accountId || null,
+    merchant,
+    expenseDate,
+    categoryId,
+  });
 
   revalidatePath("/");
 }

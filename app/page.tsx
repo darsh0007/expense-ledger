@@ -1,16 +1,19 @@
 import {
   listAccounts,
   listBudgetPeriods,
+  listCategories,
   listPeople,
   listRecentSettlements,
   listRecentTransactions,
   listReviewQueue,
   listTrashedTransactions,
   purgeTrashedBefore,
+  spendByCategory,
 } from "../src/repository/ledger.js";
 import { computePeriodSummary } from "../src/services/reporting.js";
 import {
   addBudgetPeriod,
+  addCategory,
   addPerson,
   addPurchase,
   addCustomPurchase,
@@ -101,7 +104,7 @@ export default async function DashboardPage({
   }
 
   // Read path: Service -> Repository -> Domain, exactly like the report script.
-  const [summary, people, accounts, recent, trashed, reviewQueue, settlements] = await Promise.all([
+  const [summary, people, accounts, recent, trashed, reviewQueue, settlements, categories] = await Promise.all([
     computePeriodSummary(selected.id),
     listPeople(),
     listAccounts(),
@@ -109,12 +112,14 @@ export default async function DashboardPage({
     listTrashedTransactions(),
     listReviewQueue(),
     listRecentSettlements(8),
+    listCategories(),
   ]);
 
   const nameById = new Map(people.map((p) => [p.id, p.displayName]));
   const balances = [...summary.balances.entries()];
   const me = people.find((p) => p.isMe);
   const today = new Date().toISOString().slice(0, 10);
+  const categorySpend = me ? await spendByCategory(selected.id, me.id) : [];
 
   return (
     <main>
@@ -172,6 +177,47 @@ export default async function DashboardPage({
       </section>
 
       <section className="card">
+        <h2>Spending by category</h2>
+        {categorySpend.length === 0 ? (
+          <p className="muted" style={{ margin: "0 0 12px" }}>
+            No categorized spending this period yet.
+          </p>
+        ) : (
+          <ul className="people">
+            {categorySpend.map((c) => {
+              const pct =
+                summary.budget.spentCents > 0
+                  ? Math.round((c.cents / summary.budget.spentCents) * 100)
+                  : 0;
+              return (
+                <li
+                  key={c.categoryId ?? "none"}
+                  className="row activity"
+                  style={{ padding: "8px 0" }}
+                >
+                  <span className="label">
+                    {c.name}
+                    <span className="muted"> · {pct}%</span>
+                  </span>
+                  <span className="value">{fmt(c.cents)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <form action={addCategory} className="add-person">
+          <input
+            name="name"
+            placeholder="Add a category (e.g. Groceries)…"
+            aria-label="New category name"
+            maxLength={60}
+            required
+          />
+          <button type="submit">Add</button>
+        </form>
+      </section>
+
+      <section className="card">
         <h2>Record a purchase</h2>
         <form className="purchase" action={addPurchase}>
           <div className="field">
@@ -216,6 +262,17 @@ export default async function DashboardPage({
                 ))}
               </select>
             </div>
+          </div>
+          <div className="field">
+            <label htmlFor="categoryId">Category</label>
+            <select id="categoryId" name="categoryId" defaultValue="">
+              <option value="">— uncategorized —</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label>Split equally between</label>

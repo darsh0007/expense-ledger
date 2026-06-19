@@ -132,6 +132,64 @@ export async function listAccounts(): Promise<Array<{ id: string; name: string; 
   return rows.map((r) => ({ id: r.id, name: r.name, type: r.type }));
 }
 
+/** All spending categories, alphabetical, for the category dropdown. */
+export async function listCategories(): Promise<Array<{ id: string; name: string }>> {
+  const rows = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  return rows.map((c) => ({ id: c.id, name: c.name }));
+}
+
+/** Create a category (idempotent on name, which is unique). */
+export async function createCategory(name: string): Promise<void> {
+  const clean = name.trim();
+  if (!clean) throw new Error("Category name is required");
+  await prisma.category.upsert({
+    where: { name: clean },
+    update: {},
+    create: { name: clean },
+  });
+}
+
+/** A category and how much of MY budget it consumed in a period. */
+export interface CategorySpend {
+  categoryId: string | null;
+  name: string;
+  cents: number;
+}
+
+/**
+ * My budget spend in a period, grouped by category (largest first). Sums the
+ * same slices the budget does — my own allocations with budgetImpact, inside
+ * the period, excluding trashed transactions — so the totals reconcile with the
+ * headline "personal spend". Null category shows as "Uncategorized".
+ */
+export async function spendByCategory(periodId: string, meId: string): Promise<CategorySpend[]> {
+  const period = await prisma.budgetPeriod.findUnique({ where: { id: periodId } });
+  if (!period) return [];
+
+  const grouped = await prisma.allocation.groupBy({
+    by: ["categoryId"],
+    where: {
+      personId: meId,
+      budgetImpact: true,
+      transaction: { deletedAt: null },
+      expenseDate: { gte: period.startDate, lte: period.endDate },
+    },
+    _sum: { amountCents: true },
+  });
+
+  const categories = await prisma.category.findMany();
+  const nameById = new Map(categories.map((c) => [c.id, c.name]));
+
+  return grouped
+    .map((g) => ({
+      categoryId: g.categoryId,
+      name: g.categoryId ? nameById.get(g.categoryId) ?? "Unknown" : "Uncategorized",
+      cents: g._sum.amountCents ?? 0,
+    }))
+    .filter((r) => r.cents !== 0)
+    .sort((a, b) => b.cents - a.cents);
+}
+
 /** A lightweight read model for the activity feed (keeps merchant the domain drops). */
 export interface TransactionListItem {
   id: string;
