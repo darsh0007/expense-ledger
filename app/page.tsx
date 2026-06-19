@@ -15,6 +15,7 @@ import {
   addCustomPurchase,
   addSettlement,
   destroyTransaction,
+  editTransaction,
   importStatement,
   refundTransaction,
   removePerson,
@@ -385,6 +386,52 @@ export default async function DashboardPage({
                 </span>
                 <span className="activity-right">
                   <span className="value">{fmt(t.amountCents)}</span>
+                  <details className="edit-pop">
+                    <summary
+                      className="edit-toggle"
+                      title="Edit"
+                      aria-label="Edit transaction"
+                    >
+                      ✎
+                    </summary>
+                    <form action={editTransaction} className="edit-form">
+                      <input type="hidden" name="transactionId" value={t.id} />
+                      <label>
+                        Amount
+                        <input
+                          name="amount"
+                          defaultValue={(t.amountCents / 100).toFixed(2)}
+                          readOnly={t.allocationCount > 1}
+                          inputMode="decimal"
+                        />
+                      </label>
+                      <label>
+                        Merchant
+                        <input
+                          name="merchant"
+                          defaultValue={t.merchant ?? ""}
+                          maxLength={120}
+                        />
+                      </label>
+                      <label>
+                        Date
+                        <input
+                          type="date"
+                          name="expenseDate"
+                          defaultValue={t.expenseDate.toISOString().slice(0, 10)}
+                        />
+                      </label>
+                      {t.allocationCount > 1 && (
+                        <p className="muted hint">
+                          Split across people — delete &amp; re-add to change the
+                          total.
+                        </p>
+                      )}
+                      <button type="submit" className="review-mine">
+                        Save
+                      </button>
+                    </form>
+                  </details>
                   {t.type === "purchase" && t.status !== "refunded" && (
                     <form action={refundTransaction} className="inline-delete">
                       <input type="hidden" name="transactionId" value={t.id} />

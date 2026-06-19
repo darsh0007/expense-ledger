@@ -139,6 +139,8 @@ export interface TransactionListItem {
   expenseDate: Date;
   type: TransactionType;
   status: TransactionStatus;
+  /** How many people this transaction is split across (0 for unreviewed imports). */
+  allocationCount: number;
 }
 
 /** The most recent transactions, newest first, for the dashboard feed. */
@@ -147,6 +149,7 @@ export async function listRecentTransactions(limit = 10): Promise<TransactionLis
     where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: limit,
+    include: { _count: { select: { allocations: true } } },
   });
   return rows.map((r) => ({
     id: r.id,
@@ -155,6 +158,7 @@ export async function listRecentTransactions(limit = 10): Promise<TransactionLis
     expenseDate: r.expenseDate,
     type: r.type,
     status: r.status,
+    allocationCount: r._count.allocations,
   }));
 }
 
@@ -168,6 +172,7 @@ export async function listTrashedTransactions(): Promise<TrashedTransactionItem[
   const rows = await prisma.transaction.findMany({
     where: { deletedAt: { not: null } },
     orderBy: { deletedAt: "desc" },
+    include: { _count: { select: { allocations: true } } },
   });
   return rows.map((r) => ({
     id: r.id,
@@ -176,6 +181,7 @@ export async function listTrashedTransactions(): Promise<TrashedTransactionItem[
     expenseDate: r.expenseDate,
     type: r.type as TransactionType,
     status: r.status as TransactionStatus,
+    allocationCount: r._count.allocations,
     deletedAt: r.deletedAt as Date,
   }));
 }
@@ -281,6 +287,68 @@ export async function createFullRefund(originalId: string): Promise<Transaction>
   });
 
   return toDomainTransaction(refund);
+}
+
+/** The editable fields of a transaction. */
+export interface TransactionEdit {
+  merchant: string | null;
+  expenseDate: Date;
+  amountCents: number;
+}
+
+/**
+ * Edit a transaction's merchant, date, and (when it isn't split across people)
+ * its amount. Editing the total of a multi-person split is ambiguous — we'd
+ * have to guess how to re-divide it — so that's blocked with a clear message;
+ * delete and re-add instead. For a single-allocation transaction (the common
+ * "all mine" purchase, or an owed-in-full debt) we move the matching allocation
+ * with it so conservation stays intact. Unreviewed imports have no allocations,
+ * so only the transaction row changes. Both updates run in one atomic batch.
+ */
+export async function updateTransaction(id: string, edit: TransactionEdit): Promise<void> {
+  const tx = await prisma.transaction.findUnique({
+    where: { id },
+    include: { allocations: true },
+  });
+  if (!tx) throw new Error(`Transaction not found: ${id}`);
+  if (tx.deletedAt) throw new Error("Restore this transaction from the Trash before editing it.");
+  if (tx.type === "refund") throw new Error("A refund can't be edited. Delete it and refund again if needed.");
+
+  const amountChanged = edit.amountCents !== tx.amountCents;
+  if (amountChanged && tx.allocations.length > 1) {
+    throw new Error("This purchase is split across people. Delete and re-add it to change the total.");
+  }
+
+  const single = tx.allocations.length === 1 ? tx.allocations[0]! : null;
+
+  await prisma.$transaction([
+    prisma.transaction.update({
+      where: { id },
+      data: {
+        merchant: edit.merchant,
+        expenseDate: edit.expenseDate,
+        amountCents: edit.amountCents,
+      },
+    }),
+    // Keep the single allocation (amount + date) in lock-step with the parent.
+    ...(single
+      ? [
+          prisma.allocation.update({
+            where: { id: single.id },
+            data: { amountCents: edit.amountCents, expenseDate: edit.expenseDate },
+          }),
+        ]
+      : []),
+    // For an unchanged-amount split, just keep every allocation's date in sync.
+    ...(!single && tx.allocations.length > 1
+      ? [
+          prisma.allocation.updateMany({
+            where: { transactionId: id },
+            data: { expenseDate: edit.expenseDate },
+          }),
+        ]
+      : []),
+  ]);
 }
 
 /**
@@ -397,6 +465,7 @@ export async function listReviewQueue(): Promise<TransactionListItem[]> {
   const rows = await prisma.transaction.findMany({
     where: { deletedAt: null, status: "needs_review" },
     orderBy: { expenseDate: "asc" },
+    include: { _count: { select: { allocations: true } } },
   });
   return rows.map((r) => ({
     id: r.id,
@@ -405,6 +474,7 @@ export async function listReviewQueue(): Promise<TransactionListItem[]> {
     expenseDate: r.expenseDate,
     type: r.type,
     status: r.status,
+    allocationCount: r._count.allocations,
   }));
 }
 

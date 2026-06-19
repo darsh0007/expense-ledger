@@ -301,6 +301,83 @@ button.refund:hover {
   color: var(--accent);
 }
 
+/* Inline "edit transaction" popover (a styled <details>). */
+.edit-pop {
+  position: relative;
+  display: inline-flex;
+}
+
+.edit-pop > summary {
+  list-style: none;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 0.8rem;
+  user-select: none;
+}
+
+.edit-pop > summary::-webkit-details-marker {
+  display: none;
+}
+
+.edit-pop > summary:hover,
+.edit-pop[open] > summary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.edit-form {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  text-align: left;
+}
+
+.edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.edit-form input {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.edit-form input[readonly] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.edit-form .hint {
+  margin: 0;
+}
+
 button.review-mine,
 button.review-ignore {
   border-radius: 8px;

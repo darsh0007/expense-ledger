@@ -15,6 +15,7 @@ import {
   restoreTransaction,
   softDeleteTransaction,
   updatePersonName,
+  updateTransaction,
 } from "../src/repository/ledger.js";
 import {
   dollarsToCents,
@@ -198,6 +199,27 @@ export async function refundTransaction(formData: FormData): Promise<void> {
   if (!id) return;
 
   await createFullRefund(id);
+
+  revalidatePath("/");
+}
+
+/**
+ * Server Action: edit a transaction's merchant, date, and amount. The amount is
+ * only changeable when the transaction isn't split across people (the
+ * repository enforces that). Reuses the same UTC-midnight date convention as
+ * recording a purchase so the budget period filter lines up.
+ */
+export async function editTransaction(formData: FormData): Promise<void> {
+  const id = String(formData.get("transactionId") ?? "");
+  if (!id) return;
+
+  const merchantRaw = String(formData.get("merchant") ?? "").trim();
+  const merchant = merchantRaw.length > 0 ? merchantRaw : null;
+  const amountCents = dollarsToCents(String(formData.get("amount") ?? ""));
+  const dateStr = String(formData.get("expenseDate") ?? "");
+  const expenseDate = new Date(`${dateStr}T00:00:00Z`);
+
+  await updateTransaction(id, { merchant, expenseDate, amountCents });
 
   revalidatePath("/");
 }
