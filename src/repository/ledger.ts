@@ -4,7 +4,15 @@
 // get clean domain value objects ready to hand straight to the pure functions.
 // This keeps the database an implementation detail behind a small, named API.
 
-import type { Allocation, BudgetPeriod, Person, Settlement, Transaction } from "../domain/index.js";
+import type {
+  Allocation,
+  BudgetPeriod,
+  Person,
+  Settlement,
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from "../domain/index.js";
 import { prisma } from "../lib/db.js";
 import {
   toDomainAllocation,
@@ -60,6 +68,92 @@ export async function createPerson(input: {
     },
   });
   return { ...toDomainPerson(row), displayName: row.displayName };
+}
+
+/** Active accounts (cards, cash, …) for the "paid with" dropdown. */
+export async function listAccounts(): Promise<Array<{ id: string; name: string; type: string }>> {
+  const rows = await prisma.account.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+  });
+  return rows.map((r) => ({ id: r.id, name: r.name, type: r.type }));
+}
+
+/** A lightweight read model for the activity feed (keeps merchant the domain drops). */
+export interface TransactionListItem {
+  id: string;
+  merchant: string | null;
+  amountCents: number;
+  expenseDate: Date;
+}
+
+/** The most recent transactions, newest first, for the dashboard feed. */
+export async function listRecentTransactions(limit = 10): Promise<TransactionListItem[]> {
+  const rows = await prisma.transaction.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    merchant: r.merchant,
+    amountCents: r.amountCents,
+    expenseDate: r.expenseDate,
+  }));
+}
+
+/** A consumption slice to persist alongside a new transaction. */
+export interface NewAllocation {
+  personId: string;
+  amountCents: number;
+  budgetImpact: boolean;
+  categoryId?: string | null;
+  expenseDate: Date;
+}
+
+/** A new payment event plus the allocations that account for every cent of it. */
+export interface NewTransaction {
+  payerPersonId: string;
+  paymentAccountId?: string | null;
+  amountCents: number;
+  merchant?: string | null;
+  expenseDate: Date;
+  type: TransactionType;
+  status: TransactionStatus;
+  allocations: NewAllocation[];
+}
+
+/**
+ * Write a transaction and its allocations in ONE database transaction. Prisma's
+ * nested `create` runs them atomically: either the payment event AND all of its
+ * consumption slices land together, or nothing does. That is what keeps the
+ * conservation invariant true on disk — we can never persist a transaction whose
+ * allocations don't add up because a second write failed halfway.
+ */
+export async function createTransactionWithAllocations(
+  input: NewTransaction,
+): Promise<Transaction> {
+  const row = await prisma.transaction.create({
+    data: {
+      payerPersonId: input.payerPersonId,
+      paymentAccountId: input.paymentAccountId ?? null,
+      amountCents: input.amountCents,
+      merchant: input.merchant ?? null,
+      expenseDate: input.expenseDate,
+      type: input.type,
+      status: input.status,
+      source: "manual",
+      allocations: {
+        create: input.allocations.map((a) => ({
+          personId: a.personId,
+          amountCents: a.amountCents,
+          budgetImpact: a.budgetImpact,
+          categoryId: a.categoryId ?? null,
+          expenseDate: a.expenseDate,
+        })),
+      },
+    },
+  });
+  return toDomainTransaction(row);
 }
 
 /** The three event streams the projections run over. */

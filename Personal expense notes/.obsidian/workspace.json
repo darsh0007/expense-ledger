@@ -125,12 +125,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Architecture Layers.md",
+                "file": "Project setup.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Architecture Layers"
+              "title": "Project setup"
             }
           }
         ],
@@ -298,10 +298,10 @@
   },
   "active": "7a5a7bd8fe58fa93",
   "lastOpenFiles": [
-    "Project setup.md",
-    "Architecture Layers.md",
-    "images/Pasted image 20260618144748.png",
     "Project concepts.md",
+    "Architecture Layers.md",
+    "Project setup.md",
+    "images/Pasted image 20260618144748.png",
     "Personal Expense Ledger Roadmap.md",
     "General notes.md",
     "Prisma Notes.md",
